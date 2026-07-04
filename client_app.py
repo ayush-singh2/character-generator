@@ -39,6 +39,34 @@ except Exception:
 st.set_page_config(page_title="Character Generator", page_icon="🎭", layout="wide")
 
 
+# ── password gate ───────────────────────────────────────────────────────────
+def _require_password() -> None:
+    """Block the app behind a shared password (set APP_PASSWORD in Secrets).
+
+    If APP_PASSWORD is not configured, the app stays open (so a fresh deploy
+    isn't locked out before the secret is added). Once set, users must enter it
+    before anything else renders — protecting your API credits on a public URL.
+    """
+    expected = os.getenv("APP_PASSWORD")
+    if not expected:
+        return  # no password configured — open
+    if st.session_state.get("_authed"):
+        return
+    st.title("🔒 Character Generator")
+    st.caption("This app is password-protected. Enter the password to continue.")
+    pw = st.text_input("Password", type="password")
+    if pw:
+        if pw == expected:
+            st.session_state["_authed"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    st.stop()
+
+
+_require_password()
+
+
 # ── helpers ────────────────────────────────────────────────────────────────
 def build_doc_from_text(text: str, title: str, author: str) -> dict:
     """Wrap pasted prose in the same doc shape extract.py produces."""
