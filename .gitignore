@@ -1,0 +1,29 @@
+# secrets — NEVER commit
+.env
+.streamlit/secrets.toml
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# generated / heavy artifacts
+output/
+runs/
+data/*.json
+!data/.gitkeep
+
+# large source manuscripts (copyrighted PDFs/DOCX)
+manuscript/
+Referance_book/
+Illustration_guide/
+
+# archives & tooling
+.archive_anthology/
+.archive_manuscripts/
+.tokensave/
+
+# os
+.DS_Store
