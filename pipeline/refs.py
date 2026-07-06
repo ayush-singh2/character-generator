@@ -112,24 +112,23 @@ def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
     Used with flux.edit(reference=[full_body_image]) so the face, hair and
     outfit exactly match the full-body turnaround already generated.
     """
-    # NOTE: we deliberately do NOT re-describe hair/outfit here. The reference
-    # image is the single source of truth — restating the bible's description
-    # can conflict with what the full-body actually rendered (e.g. it grew
-    # braids) and make the close-up diverge. Trust the picture, not the text.
+    # IMPORTANT: the close-up MUST include the full identity description. The
+    # reference image alone is not reliably honoured by the image endpoint, so
+    # without the identity the model falls back to a generic default face (the
+    # same person every time). The identity is the source of truth; the
+    # reference, when honoured, nudges the exact appearance to match.
     subj = _subject(c)
     animal = _is_animal(c)
-    coat = "coat, markings, fur colour and ears" if animal else "hairstyle, hair length and hair colour, and clothing"
     return (
-        f"Create an extreme close-up headshot of the SAME single {subj} shown "
-        "in the reference image. "
+        f"extreme close-up headshot of ONE single solo {subj}"
+        + (" (an animal, NOT a human)" if animal else "")
+        + ", matching the character in the reference image. "
         f"EXACTLY ONE {subj.upper()} — no second {subj}, no other figures, "
         "no one standing behind. "
-        f"The subject is a {subj}"
-        + (f" (an animal, NOT a human)" if animal else "")
-        + ". "
-        f"Copy the reference EXACTLY: the same face, the same {coat}, and the "
-        "same eyes as shown in the reference image. Do NOT change these. "
-        f"Crop very tightly to just the head so the face fills the entire frame, "
+        f"{_identity(c)}. "
+        "Keep the same face, hair/coat, eyes and colours as this description and "
+        "the reference. "
+        "Crop very tightly to just the head so the face fills the entire frame, "
         "front view, looking straight at the viewer, not full body. "
         "Plain soft neutral background. "
         f"Art style: {_style(style_prompt)}"
