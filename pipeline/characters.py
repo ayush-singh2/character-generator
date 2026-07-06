@@ -38,6 +38,7 @@ Return STRICT JSON only, no prose, with this shape:
       "aliases": ["<other names/titles used>"],
       "weight": <integer 0-100, narrative+visual prominence>,
       "tier": "main" | "supporting" | "minor",
+      "kind": "individual" | "representative",
       "role": "<one sentence: who they are in the story>",
       "visual_mentions": [
         "<each concrete visual detail the text states about them, verbatim or close paraphrase: clothing, body, age, hair, etc.>"
@@ -47,17 +48,28 @@ Return STRICT JSON only, no prose, with this shape:
 }
 Rank the array by weight, highest first.
 
-Include ONLY individual, singular characters — one distinct person (or animal)
-per entry. EXCLUDE:
-  * collective or plural groups and generic categories of people, e.g.
-    "parents", "grown-ups", "adults", "kids", "children", "girls and boys",
-    "the villagers", "the family", "friends", "classmates", "a crowd";
-  * pure abstractions, places, and unnamed crowds.
-If the text only refers to people as a group (e.g. "the parents helped"), do
-NOT create an entry for that group — only create entries for individuals who
-are singled out. A name like "Grown-ups/Parents" or "Girls and boys" is a
-group, not a character, and must be omitted.
-Only list visual_mentions the text actually supports — do not invent."""
+GOAL: return the cast an illustrator needs to draw the scenes — normally 3-6
+subjects, and AT LEAST 2 whenever the story has any supporting cast at all.
+
+Two kinds of entries are allowed:
+  * "individual" — a distinct named person or animal (e.g. "Ella", "Grandma").
+  * "representative" — ONE stand-in for a recurring group the pictures need,
+    given a concise descriptive name (e.g. "Shelter dog", "Kid volunteer",
+    "Village child"). Use these so scenes have supporting subjects even when
+    only one character is named. Mark tier "supporting" or "minor".
+
+RULES:
+  * Rank real named individuals highest.
+  * Do NOT emit raw narration phrases as characters (e.g. "Girls and boys",
+    "Moms and dads", "Grown-ups and kids", "Everyone", "You"). Instead, if such
+    a group recurs visually, CONSOLIDATE it into a single "representative"
+    entry with a clean name (e.g. "Kid volunteer") — never one entry per phrase.
+  * A prominent animal that recurs in the art (like the dogs in a dog book) is a
+    valid subject — add the most important one as a "representative".
+  * Exclude pure abstractions, places, and the reader ("YOU").
+  * Only list visual_mentions the text actually supports — do not invent.
+Aim to give the illustrator a main character plus its 1-2 most important
+supporting subjects so scenes can be composed."""
 
 BIBLE_SYSTEM = """\
 You are a character designer creating a visual bible for an ANIME-STYLE
@@ -108,20 +120,28 @@ def _manuscript_text(doc: dict, story_no: int | None = None) -> str:
     return "\n\n".join(parts)
 
 
-# Collective/group words: an entry whose name contains one of these (as a whole
-# word) is a group, not a character, and is dropped as a safety net in case the
-# LLM ignores the instruction to omit them.
-_GROUP_WORDS = {
-    "parents", "parent", "grown-ups", "grownups", "grown", "adults", "adult",
-    "kids", "kid", "children", "child", "boys", "girls", "villagers",
-    "family", "families", "friends", "classmates", "crowd", "people",
-    "everyone", "group", "students", "teachers",
+# Pure narration / reader-address phrases that are never a real subject. These
+# are dropped as a safety net; note we intentionally KEEP words like "kid",
+# "dog", "child" so legitimate representative subjects ("Kid volunteer",
+# "Shelter dog") survive.
+_NON_SUBJECT = {"everyone", "you", "yourself", "anyone", "anybody",
+                "someone", "somebody", "nobody", "us", "them", "all"}
+# Bare multi-word narration phrases to drop outright.
+_NON_SUBJECT_PHRASES = {
+    "girls and boys", "boys and girls", "moms and dads", "dads and moms",
+    "grown-ups and kids", "grown ups and kids", "kids and grown-ups",
+    "mothers and fathers", "men and women",
 }
 
 
 def _is_group_name(name: str) -> bool:
-    tokens = {t.strip("-_") for t in name.lower().replace("/", " ").replace("-", " ").split()}
-    return bool(tokens & _GROUP_WORDS)
+    n = name.lower().strip()
+    if n in _NON_SUBJECT_PHRASES:
+        return True
+    tokens = {t.strip("-_/.,") for t in n.replace("/", " ").split()}
+    # Drop only if EVERY token is a non-subject word (e.g. "everyone", "you"),
+    # so descriptive representatives like "kid volunteer" are kept.
+    return bool(tokens) and tokens.issubset(_NON_SUBJECT)
 
 
 def mine_roster(doc: dict, story_no: int | None = None) -> dict:
