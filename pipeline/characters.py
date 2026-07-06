@@ -45,8 +45,18 @@ Return STRICT JSON only, no prose, with this shape:
     }
   ]
 }
-Rank the array by weight, highest first. Include every named, embodied
-character. Exclude pure abstractions, places, and unnamed crowds.
+Rank the array by weight, highest first.
+
+Include ONLY individual, singular characters — one distinct person (or animal)
+per entry. EXCLUDE:
+  * collective or plural groups and generic categories of people, e.g.
+    "parents", "grown-ups", "adults", "kids", "children", "girls and boys",
+    "the villagers", "the family", "friends", "classmates", "a crowd";
+  * pure abstractions, places, and unnamed crowds.
+If the text only refers to people as a group (e.g. "the parents helped"), do
+NOT create an entry for that group — only create entries for individuals who
+are singled out. A name like "Grown-ups/Parents" or "Girls and boys" is a
+group, not a character, and must be omitted.
 Only list visual_mentions the text actually supports — do not invent."""
 
 BIBLE_SYSTEM = """\
@@ -98,12 +108,32 @@ def _manuscript_text(doc: dict, story_no: int | None = None) -> str:
     return "\n\n".join(parts)
 
 
+# Collective/group words: an entry whose name contains one of these (as a whole
+# word) is a group, not a character, and is dropped as a safety net in case the
+# LLM ignores the instruction to omit them.
+_GROUP_WORDS = {
+    "parents", "parent", "grown-ups", "grownups", "grown", "adults", "adult",
+    "kids", "kid", "children", "child", "boys", "girls", "villagers",
+    "family", "families", "friends", "classmates", "crowd", "people",
+    "everyone", "group", "students", "teachers",
+}
+
+
+def _is_group_name(name: str) -> bool:
+    tokens = {t.strip("-_") for t in name.lower().replace("/", " ").replace("-", " ").split()}
+    return bool(tokens & _GROUP_WORDS)
+
+
 def mine_roster(doc: dict, story_no: int | None = None) -> dict:
     user = (
         f"Title: {doc.get('title')}\nAuthor: {doc.get('author')}\n\n"
         f"MANUSCRIPT:\n{_manuscript_text(doc, story_no)}"
     )
-    return chat_json(ROSTER_SYSTEM, user, max_tokens=8192, temperature=0.3)
+    result = chat_json(ROSTER_SYSTEM, user, max_tokens=8192, temperature=0.3)
+    # Safety net: drop any collective/group entries the LLM left in.
+    chars = result.get("characters", [])
+    result["characters"] = [c for c in chars if not _is_group_name(c.get("name", ""))]
+    return result
 
 
 def draft_bible(roster: dict, doc: dict, limit: int = MAX_BIBLE_CHARACTERS) -> dict:

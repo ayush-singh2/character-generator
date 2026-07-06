@@ -92,16 +92,21 @@ def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
     Used with flux.edit(reference=[full_body_image]) so the face, hair and
     outfit exactly match the full-body turnaround already generated.
     """
+    # NOTE: we deliberately do NOT re-describe hair/outfit here. The reference
+    # image is the single source of truth — restating the bible's description
+    # can conflict with what the full-body actually rendered (e.g. it grew
+    # braids) and make the close-up diverge. Trust the picture, not the text.
     return (
-        "Using ONLY the single front-facing figure in the reference image, create "
-        "an extreme close-up headshot of that ONE character's face. "
-        "EXACTLY ONE PERSON in the image — no second person, no adult, no parent, "
-        "no other figures, no one standing behind. "
-        "Keep the identical face, hair, skin tone, eyes and outfit as the reference. "
+        "Create an extreme close-up headshot of the SAME single character shown "
+        "in the reference image. "
+        "EXACTLY ONE PERSON — no second person, no adult, no parent, no other "
+        "figures, no one standing behind. "
+        "Copy the reference EXACTLY: the same face, the SAME hairstyle, hair "
+        "length and hair colour, the same eyes, and the same clothing as shown in "
+        "the reference image. Do NOT change the hair or outfit. "
         "Crop very tightly to just the head and shoulders so the single face fills "
-        "the entire frame, front view, looking straight at the viewer. "
-        "Not full body, no torso of anyone else. Plain soft neutral background. "
-        f"Character: {_identity(c)}. "
+        "the entire frame, front view, looking straight at the viewer, not full body. "
+        "Plain soft neutral background. "
         f"Art style: {_style(style_prompt)}"
     )
 

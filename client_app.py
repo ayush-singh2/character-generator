@@ -17,9 +17,11 @@ import concurrent.futures
 import os
 import tempfile
 import time
+from io import BytesIO
 
 import streamlit as st
 from dotenv import load_dotenv
+from PIL import Image
 
 from pipeline import extract, flux, refs
 from pipeline.characters import draft_bible, mine_roster
@@ -123,6 +125,25 @@ def generate_view(prompt: str, attempts: int = 3) -> bytes:
             if i < attempts:
                 time.sleep(2 * i)  # 2s, 4s backoff
     raise last
+
+
+def crop_front_figure(img_bytes: bytes, frac: float = 0.4) -> bytes:
+    """Crop the left `frac` of a turnaround sheet — the front-facing figure.
+
+    The full-body reference is a front/side/back sheet; feeding all three to the
+    close-up edit confuses the model (it may add a companion or mix poses).
+    Cropping to just the leftmost (front) figure gives it one clean subject.
+    """
+    try:
+        im = Image.open(BytesIO(img_bytes)).convert("RGB")
+        w, h = im.size
+        cropped = im.crop((0, 0, max(1, int(w * frac)), h))
+        buf = BytesIO()
+        cropped.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:  # noqa: BLE001 — fall back to the full sheet
+        print(f"[crop_front_figure] failed, using full image: {e}", flush=True)
+        return img_bytes
 
 
 def generate_close(prompt: str, reference: bytes | None, attempts: int = 3) -> bytes:
@@ -417,7 +438,9 @@ if "bible" in st.session_state:
                     refs.close_up_edit_prompt(bible_by_name[name], style_prompt)
                     if images.get(name, {}).get("full_body")
                     else refs.portrait_prompt(bible_by_name[name], style_prompt),
-                    images.get(name, {}).get("full_body"),
+                    crop_front_figure(images[name]["full_body"])
+                    if images.get(name, {}).get("full_body")
+                    else None,
                 ): name
                 for name in chosen_unique
             }
