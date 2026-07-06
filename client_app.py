@@ -174,7 +174,7 @@ st.caption(
 
 with st.sidebar:
     st.header("Settings")
-    max_chars = st.slider("Max characters to design", 1, 10, 5)
+    max_chars = st.slider("Max characters to design", 1, 12, 7)
     concurrency = st.slider(
         "Parallel image requests", 1, 8, 4,
         help="How many images to generate at once. Higher = faster, but may hit API rate limits.",

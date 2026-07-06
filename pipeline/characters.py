@@ -48,28 +48,36 @@ Return STRICT JSON only, no prose, with this shape:
 }
 Rank the array by weight, highest first.
 
-GOAL: return the cast an illustrator needs to draw the scenes — normally 3-6
-subjects, and AT LEAST 2 whenever the story has any supporting cast at all.
+GOAL: return the cast an illustrator needs to draw the scenes — aim for 5-8
+subjects, and AT LEAST 3 whenever the story has any supporting cast at all.
+A richer cast lets the illustrator compose varied, populated scenes.
 
 Two kinds of entries are allowed:
   * "individual" — a distinct named person or animal (e.g. "Ella", "Grandma").
-  * "representative" — ONE stand-in for a recurring group the pictures need,
-    given a concise descriptive name (e.g. "Shelter dog", "Kid volunteer",
-    "Village child"). Use these so scenes have supporting subjects even when
-    only one character is named. Mark tier "supporting" or "minor".
+  * "representative" — ONE stand-in for a recurring group or a supporting/
+    background role the pictures need, given a concise descriptive name (e.g.
+    "Shelter dog", "Kid volunteer", "Shelter staff member", "Adoption visitor",
+    "Café barista", "Second shelter dog"). Mark tier "supporting" or "minor".
+
+Beyond the obvious leads, ALSO include the 2-3 most useful supporting or
+background subjects that plausibly appear in the story's settings (e.g. staff
+at a workplace, other animals, shopkeepers, event visitors, classmates) so the
+scenes aren't empty. Ground them in what the text describes — do not invent an
+unrelated cast.
 
 RULES:
-  * Rank real named individuals highest.
+  * Rank real named individuals highest, then supporting, then background.
   * Do NOT emit raw narration phrases as characters (e.g. "Girls and boys",
     "Moms and dads", "Grown-ups and kids", "Everyone", "You"). Instead, if such
     a group recurs visually, CONSOLIDATE it into a single "representative"
     entry with a clean name (e.g. "Kid volunteer") — never one entry per phrase.
   * A prominent animal that recurs in the art (like the dogs in a dog book) is a
-    valid subject — add the most important one as a "representative".
+    valid subject — you may add up to two distinct ones if the story features
+    several (e.g. "Shelter dog" and "Second shelter dog" of a different breed).
   * Exclude pure abstractions, places, and the reader ("YOU").
-  * Only list visual_mentions the text actually supports — do not invent.
-Aim to give the illustrator a main character plus its 1-2 most important
-supporting subjects so scenes can be composed."""
+  * Only list visual_mentions the text actually supports — do not invent details.
+Give the illustrator the main character plus its 3-5 most important supporting
+and background subjects so full scenes can be composed."""
 
 BIBLE_SYSTEM = """\
 You are a character designer creating a visual bible for an ANIME-STYLE
