@@ -125,6 +125,25 @@ def generate_view(prompt: str, attempts: int = 3) -> bytes:
     raise last
 
 
+def generate_close(prompt: str, reference: bytes | None, attempts: int = 3) -> bytes:
+    """Generate the close-up. If a full-body reference is given, edit from it so
+    the face/outfit match the turnaround; otherwise fall back to text-to-image."""
+    last = None
+    for i in range(1, attempts + 1):
+        try:
+            if reference:
+                return flux.edit(prompt, [reference])
+            return flux.generate(prompt)
+        except flux.ModerationError:
+            raise
+        except Exception as e:  # noqa: BLE001 — transient; retry then surface
+            last = e
+            print(f"[generate_close] attempt {i}/{attempts} failed: {e}", flush=True)
+            if i < attempts:
+                time.sleep(2 * i)
+    raise last
+
+
 # ── sidebar / settings ─────────────────────────────────────────────────────
 st.title("🎭 Character Generator")
 st.caption(
@@ -313,13 +332,11 @@ if "bible" in st.session_state:
         # Dedupe selected names so no character is queued (and billed) twice.
         chosen_unique = list(dict.fromkeys(chosen))
 
-        # Build the full task list up front: two images per chosen character.
+        # Two images per chosen character: a full-body turnaround and a close-up.
         VIEWS = {"portrait": "Close view — face / bust", "full_body": "Full view — front / side / back"}
-        prompt_fn = {"portrait": refs.portrait_prompt, "full_body": refs.full_body_prompt}
-        tasks = [(name, kind) for name in chosen_unique for kind in VIEWS]
 
         st.subheader("3 · Generating — live")
-        n_tasks = len(tasks)
+        n_tasks = len(chosen_unique) * len(VIEWS)
 
         # ── overview timer: at-a-glance status for the whole batch ──────────
         PER_IMAGE_S = 25  # rough per-image time; refined live from throughput
@@ -357,34 +374,66 @@ if "bible" in st.session_state:
 
         done = 0
         gen_t0 = time.time()
+
+        def _tick(label: str) -> None:
+            elapsed = time.time() - gen_t0
+            remaining = (n_tasks - done) * (elapsed / done) if done else n_tasks / concurrency * PER_IMAGE_S
+            m_done.metric("Images", f"{done} / {n_tasks}")
+            m_elapsed.metric("Elapsed", fmt(elapsed))
+            m_left.metric("Est. remaining", f"~{fmt(remaining)}")
+            m_eta.metric("Est. total", f"~{fmt(elapsed + remaining)}")
+            progress.progress(
+                done / n_tasks,
+                text=f"{done} / {n_tasks} images  ·  {fmt(elapsed)} elapsed  ·  ~{fmt(remaining)} left  ·  {label}",
+            )
+
+        # ── Phase A: full-body turnarounds (parallel) ───────────────────────
+        # These come first so each close-up can be generated FROM its own
+        # turnaround, keeping the two views the same character.
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
-            future_map = {
-                ex.submit(generate_view, prompt_fn[kind](bible_by_name[name], style_prompt)): (name, kind)
-                for name, kind in tasks
+            futs = {
+                ex.submit(generate_view, refs.full_body_prompt(bible_by_name[name], style_prompt)): name
+                for name in chosen_unique
             }
-            for fut in concurrent.futures.as_completed(future_map):
-                name, kind = future_map[fut]
-                ph = cells[(name, kind)]
+            for fut in concurrent.futures.as_completed(futs):
+                name = futs[fut]
+                ph = cells[(name, "full_body")]
                 try:
                     img = fut.result()
-                    images.setdefault(name, {})[kind] = img
-                    ph.image(img, caption=VIEWS[kind], use_container_width=True)
+                    images.setdefault(name, {})["full_body"] = img
+                    ph.image(img, caption=VIEWS["full_body"], use_container_width=True)
                 except flux.ModerationError:
-                    ph.warning(f"{VIEWS[kind]}: prompt was moderated — skipped.")
+                    ph.warning(f"{VIEWS['full_body']}: prompt was moderated — skipped.")
                 except Exception as e:  # noqa: BLE001 — surface any API error to the client
-                    ph.error(f"{VIEWS[kind]}: failed — {e}")
+                    ph.error(f"{VIEWS['full_body']}: failed — {e}")
                 done += 1
-                elapsed = time.time() - gen_t0
-                # Refine the estimate from actual throughput as results land.
-                remaining = (n_tasks - done) * (elapsed / done)
-                m_done.metric("Images", f"{done} / {n_tasks}")
-                m_elapsed.metric("Elapsed", fmt(elapsed))
-                m_left.metric("Est. remaining", f"~{fmt(remaining)}")
-                m_eta.metric("Est. total", f"~{fmt(elapsed + remaining)}")
-                progress.progress(
-                    done / n_tasks,
-                    text=f"{done} / {n_tasks} images  ·  {fmt(elapsed)} elapsed  ·  ~{fmt(remaining)} left",
-                )
+                _tick("full-body turnarounds")
+
+        # ── Phase B: close-ups, edited FROM each full-body reference ─────────
+        with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
+            futs = {
+                ex.submit(
+                    generate_close,
+                    refs.close_up_edit_prompt(bible_by_name[name], style_prompt)
+                    if images.get(name, {}).get("full_body")
+                    else refs.portrait_prompt(bible_by_name[name], style_prompt),
+                    images.get(name, {}).get("full_body"),
+                ): name
+                for name in chosen_unique
+            }
+            for fut in concurrent.futures.as_completed(futs):
+                name = futs[fut]
+                ph = cells[(name, "portrait")]
+                try:
+                    img = fut.result()
+                    images.setdefault(name, {})["portrait"] = img
+                    ph.image(img, caption=VIEWS["portrait"], use_container_width=True)
+                except flux.ModerationError:
+                    ph.warning(f"{VIEWS['portrait']}: prompt was moderated — skipped.")
+                except Exception as e:  # noqa: BLE001 — surface any API error to the client
+                    ph.error(f"{VIEWS['portrait']}: failed — {e}")
+                done += 1
+                _tick("close-ups")
 
         total = time.time() - gen_t0
         m_elapsed.metric("Elapsed", fmt(total))

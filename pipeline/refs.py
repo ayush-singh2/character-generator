@@ -66,10 +66,18 @@ def _identity(c: dict) -> str:
 
 
 def portrait_prompt(c: dict, style_prompt: str = "") -> str:
-    """Close view: a tight head-and-shoulders bust, face filling most of the frame."""
+    """Close view: an extreme head-and-shoulders headshot of ONE single character.
+
+    Note the strong single-subject + tight-crop language: Flux otherwise tends
+    to draw a full body or a group, especially when the character name is
+    plural. When a reference image is passed (see close_up_edit_prompt), this
+    same framing is applied on top of that reference for consistency.
+    """
     return (
-        "character close-up portrait, head-and-shoulders bust, upper body only, "
-        "the face fills most of the frame, front view looking toward the viewer, "
+        "extreme close-up headshot portrait of ONE single solo character, "
+        "just the head and shoulders, face fills the whole frame, tightly cropped "
+        "at the shoulders, front view looking straight at the viewer, "
+        "NOT full body, only one person, single subject, "
         "highly detailed facial features and expression, "
         f"{_identity(c)}, "
         "plain soft neutral background, soft even lighting, "
@@ -78,10 +86,28 @@ def portrait_prompt(c: dict, style_prompt: str = "") -> str:
     )
 
 
+def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
+    """Prompt for turning a full-body reference into a matching close-up headshot.
+
+    Used with flux.edit(reference=[full_body_image]) so the face, hair and
+    outfit exactly match the full-body turnaround already generated.
+    """
+    return (
+        "Create an extreme close-up headshot portrait of the SAME single "
+        "character shown in the reference image. Keep the identical face, hair, "
+        "skin tone, eyes and outfit. Crop tightly to just the head and shoulders "
+        "so the face fills the whole frame, front view, one person only, not full "
+        "body. Plain soft neutral background. "
+        f"Character: {_identity(c)}. "
+        f"Art style: {_style(style_prompt)}"
+    )
+
+
 def full_body_prompt(c: dict, style_prompt: str = "") -> str:
     """Full view: one turnaround sheet with three full-length views of the same character."""
     return (
-        "full-body character turnaround model sheet, one image showing the SAME character "
+        "full-body character turnaround model sheet of ONE single solo character, "
+        "one image showing the SAME one character "
         "three times side by side at identical scale, identical outfit and identical proportions: "
         "(1) full-length front view, (2) full-length side profile view, (3) full-length back view, "
         "each shown head-to-toe from head to feet in a neutral standing A-pose, "
