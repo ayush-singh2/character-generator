@@ -188,6 +188,11 @@ with st.sidebar:
     if style_mode == "Choose manually":
         key = st.selectbox("Style family", list(STYLE_CATALOG))
         manual_style = STYLE_CATALOG[key]
+    auto_regen = st.checkbox(
+        "Auto-regenerate on style change", value=True,
+        help="After you've generated once, changing the style re-renders the images "
+             "with the new tone — reusing the extracted characters (no re-analysis).",
+    )
 
     if not os.getenv("OPENROUTER_API_KEY"):
         st.error("OPENROUTER_API_KEY is not set in .env")
@@ -245,6 +250,9 @@ if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True
                 st.write("🎨 **Choosing art style** — LLM reading the prose to pick a style…")
                 style_result = judge(doc)
                 style_prompt = style_result.get("style_prompt", "")
+                # Remember the auto-detected style so switching back to
+                # Auto-detect later restores it without re-analysing.
+                st.session_state["auto_style_prompt"] = style_prompt
             st.session_state["style_prompt"] = style_prompt
             st.session_state["style_result"] = style_result
             st.write(
@@ -328,7 +336,11 @@ if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True
 if "bible" in st.session_state:
     doc = st.session_state["doc"]
     st.success(f"**{doc['title']}** — found {len(st.session_state['roster'])} characters")
-    st.caption(f"Art style: {st.session_state['style_prompt'][:160]}…")
+    _shown_style = (
+        manual_style if style_mode == "Choose manually"
+        else st.session_state.get("auto_style_prompt", st.session_state.get("style_prompt", ""))
+    )
+    st.caption(f"Art style ({'manual' if style_mode == 'Choose manually' else 'auto'}): {_shown_style[:160]}…")
 
     st.subheader("2 · Choose which characters to generate")
     # Dedupe: the LLM occasionally lists the same character twice, which would
@@ -345,13 +357,10 @@ if "bible" in st.session_state:
             )
 
     # ── step 3: generate images (parallel + live view) ─────────────────────
-    if st.button("🎨 Generate character images", type="primary", use_container_width=True):
-        images = ss("images", {})
-        style_prompt = st.session_state["style_prompt"]
+    def run_generation(style_prompt: str, chosen_unique: list[str]) -> None:
+        # Fresh set each run so a style change fully replaces the images.
+        images: dict = {}
         bible_by_name = {c["name"]: c for c in st.session_state["bible"]}
-
-        # Dedupe selected names so no character is queued (and billed) twice.
-        chosen_unique = list(dict.fromkeys(chosen))
 
         # Two images per chosen character: a full-body turnaround and a close-up.
         VIEWS = {"portrait": "Close view — face / bust", "full_body": "Full view — front / side / back"}
@@ -466,6 +475,34 @@ if "bible" in st.session_state:
         live_area.empty()  # clear the transient live grid; gallery renders below
         st.success(f"⏱️ Generated {n_tasks} images in {fmt(total)}.")
         st.session_state["images"] = images
+        st.session_state["gen_style"] = style_prompt  # remember the tone we rendered
+
+    # ── trigger: manual generate, or auto-regenerate when the style changes ──
+    # Effective style = the CURRENT sidebar selection (not the one frozen at
+    # analysis time), so switching the style family takes effect immediately.
+    eff_style = (
+        manual_style if style_mode == "Choose manually"
+        else st.session_state.get("auto_style_prompt", st.session_state.get("style_prompt", ""))
+    )
+    chosen_unique = list(dict.fromkeys(chosen))
+
+    do_generate = st.button("🎨 Generate character images", type="primary", use_container_width=True)
+    # Re-render (reusing the already-extracted bible) when the tone differs from
+    # what we last generated — no re-extraction, no re-analysis.
+    style_changed = (
+        "images" in st.session_state
+        and bool(eff_style)
+        and st.session_state.get("gen_style") != eff_style
+    )
+
+    if do_generate:
+        run_generation(eff_style, chosen_unique)
+    elif style_changed and auto_regen:
+        st.info("🎨 Style changed — regenerating with the new tone (reusing extracted characters)…")
+        run_generation(eff_style, chosen_unique)
+    elif style_changed and not auto_regen:
+        st.warning("Style changed. Click **Generate** to re-render with the new tone, "
+                   "or enable *Auto-regenerate on style change* in the sidebar.")
 
 
 # ── results ────────────────────────────────────────────────────────────────
