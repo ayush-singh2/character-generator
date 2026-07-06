@@ -79,12 +79,27 @@ design — where the text is silent, make tasteful choices that fit the
 character's era, culture, and role, and mark those as "inferred".
 
 The output drives an AI image generator, so be concrete and unambiguous
-(exact colors, specific garments). Return STRICT JSON only:
+(exact colors, specific garments).
+
+CRITICAL — commit to ONE concrete individual per entry:
+  * Even for a "representative" subject (e.g. "Shelter dog", "Kid volunteer"),
+    design ONE specific individual with a SINGLE fixed appearance. Pick one
+    breed, one gender, one hair/coat, one outfit. NEVER describe a category or
+    a range ("various breeds", "mixed male and female", "diverse", "assorted",
+    "different colors") — that makes an inconsistent, corrupted reference sheet.
+    Choose one and describe only that one.
+  * Set "species" correctly. For NON-human subjects (animals), the visual fields
+    describe the ANIMAL: "hair" = its coat colour/length, "skin_tone" = "N/A",
+    "default_outfit" = collar/bandana or "none", "face" = its muzzle/ears. Do
+    NOT give an animal human clothing, hairstyles, or a human face.
+
+Return STRICT JSON only:
 {
   "characters": [
     {
       "name": "...",
       "tier": "...",
+      "species": "human | dog | cat | <specific animal>",
       "age_appearance": "...",
       "gender": "...",
       "height_build": "...",

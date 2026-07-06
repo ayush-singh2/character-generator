@@ -32,6 +32,20 @@ def _style(style_prompt: str) -> str:
     return style_prompt or "clean illustrated character design"
 
 
+def _species(c: dict) -> str:
+    return (c.get("species") or "human").strip().lower()
+
+
+def _is_animal(c: dict) -> bool:
+    return _species(c) not in ("", "human", "person", "people")
+
+
+def _subject(c: dict) -> str:
+    """The noun to use in prompts: 'character'/'person' for humans, the animal
+    species for animals (so a dog close-up is a dog, not a girl)."""
+    return _species(c) if _is_animal(c) else "character"
+
+
 def _identity(c: dict) -> str:
     """The shared, canonical description of a character.
 
@@ -41,13 +55,17 @@ def _identity(c: dict) -> str:
     """
     outfit = c.get("default_outfit", {})
     outfit_colors = ", ".join(outfit.get("colors", [])[:4])
+    animal = _is_animal(c)
     parts = [
-        f"{c.get('age_appearance', '')} {c.get('gender', '')}".strip(),
+        # For animals, lead with the species so the model draws the right thing.
+        (f"a {_species(c)}, " if animal else "")
+        + f"{c.get('age_appearance', '')} {c.get('gender', '')}".strip(),
         f"height and build: {c.get('height_build', '')}",
-        f"skin tone: {c.get('skin_tone', '')}",
-        f"hair: {c.get('hair', '')}",
+        # Skip human-only "skin tone" for animals.
+        "" if animal else f"skin tone: {c.get('skin_tone', '')}",
+        f"{'coat' if animal else 'hair'}: {c.get('hair', '')}",
         f"eyes: {c.get('eyes', '')}",
-        f"face: {c.get('face', '')}",
+        f"{'muzzle and ears' if animal else 'face'}: {c.get('face', '')}",
     ]
     feats = ", ".join(c.get("distinguishing_features", [])[:4])
     if feats:
@@ -73,11 +91,13 @@ def portrait_prompt(c: dict, style_prompt: str = "") -> str:
     plural. When a reference image is passed (see close_up_edit_prompt), this
     same framing is applied on top of that reference for consistency.
     """
+    subj = _subject(c)
     return (
-        "extreme close-up headshot portrait of ONE single solo character, "
-        "just the head and shoulders, face fills the whole frame, tightly cropped "
-        "at the shoulders, front view looking straight at the viewer, "
-        "NOT full body, only one person, single subject, "
+        f"extreme close-up headshot of ONE single solo {subj}, "
+        f"just the head{'' if _is_animal(c) else ' and shoulders'}, "
+        "face fills the whole frame, tightly cropped, "
+        "front view looking straight at the viewer, "
+        f"NOT full body, only one {subj}, single subject, "
         "highly detailed facial features and expression, "
         f"{_identity(c)}, "
         "plain soft neutral background, soft even lighting, "
@@ -96,16 +116,21 @@ def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
     # image is the single source of truth — restating the bible's description
     # can conflict with what the full-body actually rendered (e.g. it grew
     # braids) and make the close-up diverge. Trust the picture, not the text.
+    subj = _subject(c)
+    animal = _is_animal(c)
+    coat = "coat, markings, fur colour and ears" if animal else "hairstyle, hair length and hair colour, and clothing"
     return (
-        "Create an extreme close-up headshot of the SAME single character shown "
+        f"Create an extreme close-up headshot of the SAME single {subj} shown "
         "in the reference image. "
-        "EXACTLY ONE PERSON — no second person, no adult, no parent, no other "
-        "figures, no one standing behind. "
-        "Copy the reference EXACTLY: the same face, the SAME hairstyle, hair "
-        "length and hair colour, the same eyes, and the same clothing as shown in "
-        "the reference image. Do NOT change the hair or outfit. "
-        "Crop very tightly to just the head and shoulders so the single face fills "
-        "the entire frame, front view, looking straight at the viewer, not full body. "
+        f"EXACTLY ONE {subj.upper()} — no second {subj}, no other figures, "
+        "no one standing behind. "
+        f"The subject is a {subj}"
+        + (f" (an animal, NOT a human)" if animal else "")
+        + ". "
+        f"Copy the reference EXACTLY: the same face, the same {coat}, and the "
+        "same eyes as shown in the reference image. Do NOT change these. "
+        f"Crop very tightly to just the head so the face fills the entire frame, "
+        "front view, looking straight at the viewer, not full body. "
         "Plain soft neutral background. "
         f"Art style: {_style(style_prompt)}"
     )
@@ -113,9 +138,10 @@ def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
 
 def full_body_prompt(c: dict, style_prompt: str = "") -> str:
     """Full view: one turnaround sheet with three full-length views of the same character."""
+    subj = _subject(c)
     return (
-        "full-body character turnaround model sheet of ONE single solo character, "
-        "one image showing the SAME one character "
+        f"full-body {subj} turnaround model sheet of ONE single solo {subj}, "
+        f"one image showing the SAME one {subj} "
         "three times side by side at identical scale, identical outfit and identical proportions: "
         "(1) full-length front view, (2) full-length side profile view, (3) full-length back view, "
         "each shown head-to-toe from head to feet in a neutral standing A-pose, "
