@@ -188,10 +188,10 @@ with st.sidebar:
     if style_mode == "Choose manually":
         key = st.selectbox("Style family", list(STYLE_CATALOG))
         manual_style = STYLE_CATALOG[key]
-    auto_regen = st.checkbox(
-        "Auto-regenerate on style change", value=True,
-        help="After you've generated once, changing the style re-renders the images "
-             "with the new tone — reusing the extracted characters (no re-analysis).",
+    auto_preview = st.checkbox(
+        "Auto-preview tone on style change", value=True,
+        help="When you change the style, render a quick 1-image preview of one "
+             "character so you can compare tones cheaply before applying to everyone.",
     )
 
     if not os.getenv("OPENROUTER_API_KEY"):
@@ -487,22 +487,56 @@ if "bible" in st.session_state:
     chosen_unique = list(dict.fromkeys(chosen))
 
     do_generate = st.button("🎨 Generate character images", type="primary", use_container_width=True)
-    # Re-render (reusing the already-extracted bible) when the tone differs from
-    # what we last generated — no re-extraction, no re-analysis.
+
+    # Has the tone changed since the full set was last rendered?
     style_changed = (
         "images" in st.session_state
         and bool(eff_style)
         and st.session_state.get("gen_style") != eff_style
     )
 
-    if do_generate:
+    apply_tone = False
+    if style_changed and chosen_unique:
+        bible_by_name = {c["name"]: c for c in st.session_state["bible"]}
+        preview_name = chosen_unique[0]  # top-ranked character represents the tone
+
+        st.subheader("🎨 Tone preview")
+        st.caption(
+            f"New style previewed on **{preview_name}** (1 image, cheap). "
+            "Compare tones, then apply to everyone."
+        )
+        want_preview = auto_preview or st.button("👁 Preview this tone", key="prev_btn")
+
+        # Render the preview once per (style, character); cache so switching back
+        # and forth doesn't re-bill.
+        cache_key = (eff_style, preview_name)
+        if want_preview and st.session_state.get("preview_key") != cache_key:
+            with st.spinner("Rendering tone preview…"):
+                try:
+                    st.session_state["preview_img"] = generate_view(
+                        refs.full_body_prompt(bible_by_name[preview_name], eff_style)
+                    )
+                except Exception as e:  # noqa: BLE001
+                    st.session_state["preview_img"] = None
+                    st.error(f"Preview failed — {e}")
+            st.session_state["preview_key"] = cache_key
+
+        if st.session_state.get("preview_key") == cache_key and st.session_state.get("preview_img"):
+            st.image(
+                st.session_state["preview_img"],
+                caption=f"{preview_name} — new tone preview",
+                width=360,
+            )
+            apply_tone = st.button(
+                "✅ Apply this tone to all characters", type="primary", use_container_width=True
+            )
+        elif not want_preview:
+            st.info("Click **Preview this tone** to see the new style on one character.")
+
+    if do_generate or apply_tone:
+        st.session_state.pop("preview_img", None)  # preview consumed
+        st.session_state.pop("preview_key", None)
         run_generation(eff_style, chosen_unique)
-    elif style_changed and auto_regen:
-        st.info("🎨 Style changed — regenerating with the new tone (reusing extracted characters)…")
-        run_generation(eff_style, chosen_unique)
-    elif style_changed and not auto_regen:
-        st.warning("Style changed. Click **Generate** to re-render with the new tone, "
-                   "or enable *Auto-regenerate on style change* in the sidebar.")
 
 
 # ── results ────────────────────────────────────────────────────────────────
