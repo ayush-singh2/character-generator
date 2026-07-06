@@ -343,10 +343,48 @@ if "bible" in st.session_state:
     st.caption(f"Art style ({'manual' if style_mode == 'Choose manually' else 'auto'}): {_shown_style[:160]}…")
 
     st.subheader("2 · Choose which characters to generate")
-    # Dedupe: the LLM occasionally lists the same character twice, which would
-    # otherwise queue duplicate generations for that character.
-    names = list(dict.fromkeys(c["name"] for c in st.session_state["bible"]))
-    chosen = st.multiselect("Characters", names, default=names)
+    # Dedupe: the LLM occasionally lists the same character twice.
+    _seen: set = set()
+    uniq_chars = []
+    for c in st.session_state["bible"]:
+        if c["name"] not in _seen:
+            _seen.add(c["name"])
+            uniq_chars.append(c)
+
+    st.caption(
+        "**Main** and **supporting** characters are pre-selected. "
+        "**Minor / background** roles are optional — uncheck any to save cost."
+    )
+    b1, b2, b3 = st.columns(3)
+    if b1.button("Select all", use_container_width=True):
+        for c in uniq_chars:
+            st.session_state[f"pick_{c['name']}"] = True
+    if b2.button("Only main + supporting", use_container_width=True):
+        for c in uniq_chars:
+            st.session_state[f"pick_{c['name']}"] = (c.get("tier", "").lower() != "minor")
+    if b3.button("Clear all", use_container_width=True):
+        for c in uniq_chars:
+            st.session_state[f"pick_{c['name']}"] = False
+
+    _tier_icon = {"main": "⭐", "supporting": "🔹", "minor": "▫️"}
+    chosen = []
+    cols = st.columns(2)
+    for i, c in enumerate(uniq_chars):
+        tier = (c.get("tier") or "").lower()
+        kind = c.get("kind", "")
+        species = c.get("species", "")
+        default = tier != "minor"  # smart default: skip minor/background
+        bits = [tier or "?"]
+        if kind == "representative":
+            bits.append("stand-in")
+        if species and species != "human":
+            bits.append(species)
+        label = f"{_tier_icon.get(tier, '•')} {c['name']}  ·  {' · '.join(bits)}"
+        if cols[i % 2].checkbox(label, value=default, key=f"pick_{c['name']}"):
+            chosen.append(c["name"])
+
+    n_sel = len(chosen)
+    st.caption(f"**{n_sel}** selected → **{n_sel * 2}** images (~${n_sel * 2 * 0.07:.2f}).")
 
     with st.expander("View character bible (LLM-designed details)"):
         for c in st.session_state["bible"]:
