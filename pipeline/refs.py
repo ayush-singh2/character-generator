@@ -93,11 +93,14 @@ def close_up_edit_prompt(c: dict, style_prompt: str = "") -> str:
     outfit exactly match the full-body turnaround already generated.
     """
     return (
-        "Create an extreme close-up headshot portrait of the SAME single "
-        "character shown in the reference image. Keep the identical face, hair, "
-        "skin tone, eyes and outfit. Crop tightly to just the head and shoulders "
-        "so the face fills the whole frame, front view, one person only, not full "
-        "body. Plain soft neutral background. "
+        "Using ONLY the single front-facing figure in the reference image, create "
+        "an extreme close-up headshot of that ONE character's face. "
+        "EXACTLY ONE PERSON in the image — no second person, no adult, no parent, "
+        "no other figures, no one standing behind. "
+        "Keep the identical face, hair, skin tone, eyes and outfit as the reference. "
+        "Crop very tightly to just the head and shoulders so the single face fills "
+        "the entire frame, front view, looking straight at the viewer. "
+        "Not full body, no torso of anyone else. Plain soft neutral background. "
         f"Character: {_identity(c)}. "
         f"Art style: {_style(style_prompt)}"
     )
