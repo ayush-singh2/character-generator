@@ -188,12 +188,6 @@ with st.sidebar:
     if style_mode == "Choose manually":
         key = st.selectbox("Style family", list(STYLE_CATALOG))
         manual_style = STYLE_CATALOG[key]
-    auto_preview = st.checkbox(
-        "Auto-preview tone on style change", value=True,
-        help="When you change the style, render a quick 1-image preview of one "
-             "character so you can compare tones cheaply before applying to everyone.",
-    )
-
     if not os.getenv("OPENROUTER_API_KEY"):
         st.error("OPENROUTER_API_KEY is not set in .env")
 
@@ -245,24 +239,22 @@ if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True
             if manual_style:
                 st.write("🎨 **Art style** — using your manually chosen style family…")
                 style_prompt = manual_style
-                style_result = {"chosen": "(manual)", "style_prompt": manual_style}
+                top_styles = [{"key": "manual", "label": "Your chosen style",
+                               "why": "", "style_prompt": manual_style}]
+                style_result = {"chosen": "(manual)", "style_prompt": manual_style,
+                                "top_styles": top_styles}
             else:
-                st.write("🎨 **Choosing art style** — LLM reading the prose to pick a style…")
+                st.write("🎨 **Recommending styles** — LLM reading the prose to rank the best 3…")
                 style_result = judge(doc)
-                style_prompt = style_result.get("style_prompt", "")
-                # Remember the auto-detected style so switching back to
-                # Auto-detect later restores it without re-analysing.
+                top_styles = style_result.get("top_styles", [])
+                style_prompt = top_styles[0]["style_prompt"] if top_styles else style_result.get("style_prompt", "")
                 st.session_state["auto_style_prompt"] = style_prompt
             st.session_state["style_prompt"] = style_prompt
             st.session_state["style_result"] = style_result
-            st.write(
-                f"✓ Style locked: **{style_result.get('chosen', '?')}**"
-                + (f" (runner-up: {style_result.get('runner_up')})" if style_result.get("runner_up") else "")
-                + f"  ·  {time.time() - t:0.1f}s"
-            )
-            if style_result.get("reasoning"):
-                st.caption(f"_Why:_ {style_result['reasoning']}")
-            st.caption(style_prompt[:400] + ("…" if len(style_prompt) > 400 else ""))
+            st.session_state["top_styles"] = top_styles
+            st.write(f"✓ Recommended **{len(top_styles)}** style(s)  ·  {time.time() - t:0.1f}s")
+            for si, sty in enumerate(top_styles, 1):
+                st.markdown(f"**{si}. {sty['label']}**" + (f" — {sty['why']}" if sty.get("why") else ""))
             # Transparency: show exactly what prose the LLM saw + its full output,
             # so a wrong/hallucinated style is easy to spot (it is not hardcoded).
             with st.expander("Style analysis — prose sent to the LLM & full decision"):
@@ -336,11 +328,12 @@ if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True
 if "bible" in st.session_state:
     doc = st.session_state["doc"]
     st.success(f"**{doc['title']}** — found {len(st.session_state['roster'])} characters")
-    _shown_style = (
-        manual_style if style_mode == "Choose manually"
-        else st.session_state.get("auto_style_prompt", st.session_state.get("style_prompt", ""))
-    )
-    st.caption(f"Art style ({'manual' if style_mode == 'Choose manually' else 'auto'}): {_shown_style[:160]}…")
+    if style_mode == "Choose manually" and manual_style:
+        st.caption("Art style: your manually chosen family (sidebar).")
+    else:
+        _labels = [s["label"] for s in st.session_state.get("top_styles", [])]
+        if _labels:
+            st.caption("Recommended styles: " + " · ".join(_labels))
 
     st.subheader("2 · Choose which characters to generate")
     # Dedupe: the LLM occasionally lists the same character twice.
@@ -515,66 +508,65 @@ if "bible" in st.session_state:
         st.session_state["images"] = images
         st.session_state["gen_style"] = style_prompt  # remember the tone we rendered
 
-    # ── trigger: manual generate, or auto-regenerate when the style changes ──
-    # Effective style = the CURRENT sidebar selection (not the one frozen at
-    # analysis time), so switching the style family takes effect immediately.
-    eff_style = (
-        manual_style if style_mode == "Choose manually"
-        else st.session_state.get("auto_style_prompt", st.session_state.get("style_prompt", ""))
-    )
+    # ── step 3: pick a style (preview main char in the top 3) → generate all ─
     chosen_unique = list(dict.fromkeys(chosen))
+    bible_by_name = {c["name"]: c for c in st.session_state["bible"]}
+    # Manual mode stays live from the current sidebar selection; auto mode uses
+    # the top-3 recommended at analysis time.
+    if style_mode == "Choose manually" and manual_style:
+        top_styles = [{"key": "manual", "label": "Your chosen style",
+                       "why": "", "style_prompt": manual_style}]
+    else:
+        top_styles = st.session_state.get("top_styles", [])
+    # Main character (highest-ranked) represents each style in the preview.
+    main_name = uniq_chars[0]["name"] if uniq_chars else (chosen_unique[0] if chosen_unique else None)
 
-    do_generate = st.button("🎨 Generate character images", type="primary", use_container_width=True)
-
-    # Has the tone changed since the full set was last rendered?
-    style_changed = (
-        "images" in st.session_state
-        and bool(eff_style)
-        and st.session_state.get("gen_style") != eff_style
-    )
-
-    apply_tone = False
-    if style_changed and chosen_unique:
-        bible_by_name = {c["name"]: c for c in st.session_state["bible"]}
-        preview_name = chosen_unique[0]  # top-ranked character represents the tone
-
-        st.subheader("🎨 Tone preview")
+    st.subheader("3 · Pick a style")
+    if not top_styles or not main_name:
+        st.info("Analyze a manuscript first to get style recommendations.")
+    else:
         st.caption(
-            f"New style previewed on **{preview_name}** (1 image, cheap). "
-            "Compare tones, then apply to everyone."
+            f"Preview shows the main character **{main_name}** in each recommended style. "
+            "Pick one to generate **all selected characters (both views)** in that style."
         )
-        want_preview = auto_preview or st.button("👁 Preview this tone", key="prev_btn")
+        if st.button("🎨 Generate style previews", type="primary", use_container_width=True):
+            st.session_state["show_style_previews"] = True
 
-        # Render the preview once per (style, character); cache so switching back
-        # and forth doesn't re-bill.
-        cache_key = (eff_style, preview_name)
-        if want_preview and st.session_state.get("preview_key") != cache_key:
-            with st.spinner("Rendering tone preview…"):
-                try:
-                    st.session_state["preview_img"] = generate_view(
-                        refs.full_body_prompt(bible_by_name[preview_name], eff_style)
-                    )
-                except Exception as e:  # noqa: BLE001
-                    st.session_state["preview_img"] = None
-                    st.error(f"Preview failed — {e}")
-            st.session_state["preview_key"] = cache_key
+        if st.session_state.get("show_style_previews"):
+            # Render the main character full-length in each style — parallel, cached.
+            pkey = tuple(s["style_prompt"] for s in top_styles) + (main_name,)
+            if st.session_state.get("style_previews_key") != pkey:
+                with st.spinner(f"Rendering {main_name} in {len(top_styles)} style(s)…"):
+                    def _prev(sty):
+                        try:
+                            return generate_view(
+                                refs.full_body_prompt(bible_by_name[main_name], sty["style_prompt"])
+                            )
+                        except Exception as e:  # noqa: BLE001
+                            print(f"[style preview] {sty.get('key')} failed: {e}", flush=True)
+                            return None
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(top_styles))) as ex:
+                        st.session_state["style_previews"] = list(ex.map(_prev, top_styles))
+                st.session_state["style_previews_key"] = pkey
 
-        if st.session_state.get("preview_key") == cache_key and st.session_state.get("preview_img"):
-            st.image(
-                st.session_state["preview_img"],
-                caption=f"{preview_name} — new tone preview",
-                width=360,
-            )
-            apply_tone = st.button(
-                "✅ Apply this tone to all characters", type="primary", use_container_width=True
-            )
-        elif not want_preview:
-            st.info("Click **Preview this tone** to see the new style on one character.")
-
-    if do_generate or apply_tone:
-        st.session_state.pop("preview_img", None)  # preview consumed
-        st.session_state.pop("preview_key", None)
-        run_generation(eff_style, chosen_unique)
+            previews = st.session_state.get("style_previews", [])
+            cols = st.columns(len(top_styles))
+            for i, sty in enumerate(top_styles):
+                with cols[i]:
+                    st.markdown(f"**{i + 1}. {sty['label']}**")
+                    if sty.get("why"):
+                        st.caption(sty["why"])
+                    img = previews[i] if i < len(previews) else None
+                    if img:
+                        st.image(img, use_container_width=True)
+                    else:
+                        st.error("Preview failed.")
+                    if st.button("✅ Generate all in this style", key=f"applysty_{i}",
+                                 use_container_width=True):
+                        st.session_state["show_style_previews"] = False
+                        st.session_state.pop("style_previews", None)
+                        st.session_state.pop("style_previews_key", None)
+                        run_generation(sty["style_prompt"], chosen_unique)
 
 
 # ── results ────────────────────────────────────────────────────────────────

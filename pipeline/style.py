@@ -46,14 +46,23 @@ scenes", "forest", "running", etc.). Base it on the chosen catalog family and
 the book's tone only. If you invent style details, keep them generic to the
 medium, never specific to this book's plot.
 
+Recommend the TOP 3 best-fitting style families (ranked best first), each with
+its own refined STYLE-ONLY descriptor, so the user can compare and choose.
+
 Return STRICT JSON only:
 {
   "audience": "<inferred reader age/group>",
   "tone": "<2-4 mood adjectives>",
-  "chosen": "<exact key from the catalog>",
-  "runner_up": "<exact key>",
-  "reasoning": "<2-3 sentences on why this style fits>",
-  "style_prompt": "<one dense STYLE-ONLY descriptor, refined from the chosen family — medium, linework, colour, texture, lighting, mood. NO subject matter or scenes>",
+  "top_styles": [
+    {
+      "key": "<exact key from the catalog>",
+      "label": "<short human-friendly name, e.g. 'Warm Watercolor'>",
+      "why": "<1 sentence on why it fits this book>",
+      "style_prompt": "<one dense STYLE-ONLY descriptor refined from this family — medium, linework, colour, texture, lighting, mood. NO subject matter or scenes>"
+    },
+    { "... 2nd best ..." },
+    { "... 3rd best ..." }
+  ],
   "palette": ["<4-6 signature colours, names or hex>"]
 }"""
 
@@ -72,11 +81,31 @@ def judge(doc: dict) -> dict:
         f"BOOK: {doc.get('title')} by {doc.get('author')}\n"
         f"SAMPLE PROSE:\n{_sample(doc)}"
     )
-    result = chat_json(SYSTEM, user, max_tokens=1200, temperature=0.3)
-    # Guard: ensure chosen key is valid; fall back to warm_watercolor.
-    if result.get("chosen") not in STYLE_CATALOG:
-        result["chosen"] = "warm_watercolor"
-        result["style_prompt"] = STYLE_CATALOG["warm_watercolor"]
+    result = chat_json(SYSTEM, user, max_tokens=1500, temperature=0.3)
+
+    # Normalise the top-3 list, filling any missing style_prompt from the catalog.
+    top = result.get("top_styles") or []
+    clean = []
+    for s in top[:3]:
+        key = s.get("key")
+        prompt = s.get("style_prompt") or STYLE_CATALOG.get(key, "")
+        if not prompt:
+            continue
+        clean.append({
+            "key": key or "style",
+            "label": s.get("label") or (key or "Style").replace("_", " ").title(),
+            "why": s.get("why", ""),
+            "style_prompt": prompt,
+        })
+    if not clean:  # hard fallback so the app always has something to show
+        clean = [{
+            "key": "warm_watercolor", "label": "Warm Watercolor", "why": "",
+            "style_prompt": STYLE_CATALOG["warm_watercolor"],
+        }]
+    result["top_styles"] = clean
+    # Back-compat: expose the best pick as chosen/style_prompt too.
+    result.setdefault("chosen", clean[0]["key"])
+    result.setdefault("style_prompt", clean[0]["style_prompt"])
     return result
 
 
