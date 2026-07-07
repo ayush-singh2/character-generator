@@ -182,6 +182,26 @@ def crop_front_figure(img_bytes: bytes, frac: float = 0.4) -> bytes:
         return img_bytes
 
 
+def crop_face(img_bytes: bytes) -> bytes:
+    """Derive a head/bust close view by cropping the top of the full-body.
+
+    Guarantees a close view even when the close-up API call fails or is
+    moderated — the full-body almost always succeeded, so we crop its head.
+    Works for both a single centred figure and a 3-view turnaround (the top
+    band holds the head/heads either way).
+    """
+    try:
+        im = Image.open(BytesIO(img_bytes)).convert("RGB")
+        w, h = im.size
+        bust = im.crop((0, 0, w, max(1, int(h * 0.5))))   # top half = head/shoulders
+        buf = BytesIO()
+        bust.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:  # noqa: BLE001
+        print(f"[crop_face] failed: {e}", flush=True)
+        return img_bytes
+
+
 def generate_close(prompt: str, reference: bytes | None, attempts: int = 3) -> bytes:
     """Generate the close-up. If a full-body reference is given, edit from it so
     the face/outfit match the turnaround; otherwise fall back to text-to-image."""
@@ -619,7 +639,7 @@ if "bible" in st.session_state:
                 _tick("full-body turnarounds")
 
         # ── Phase B: close-ups, edited FROM each full-body reference ─────────
-        def _closeup_task(name):
+        def _closeup_gen(name):
             has_fb = bool(images.get(name, {}).get("full_body"))
             fb_crop = crop_front_figure(images[name]["full_body"]) if has_fb else None
             if name in char_refs:
@@ -636,18 +656,31 @@ if "bible" in st.session_state:
             return generate_close(
                 refs.portrait_prompt(bible_by_name[name], style_prompt), None)
 
+        def _closeup_task(name):
+            """Always return a close view — if the API call fails or is moderated,
+            crop the head from the full-body (which almost always succeeded) so the
+            client never sees 'Close view not available'."""
+            try:
+                return _closeup_gen(name), False
+            except Exception as e:  # noqa: BLE001 — moderation or API error
+                fb = images.get(name, {}).get("full_body")
+                if fb:
+                    print(f"[closeup] {name}: {str(e)[:80]} — cropping face from full-body",
+                          flush=True)
+                    return crop_face(fb), True
+                raise
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
             futs = {ex.submit(_closeup_task, name): name for name in chosen_unique}
             for fut in concurrent.futures.as_completed(futs):
                 name = futs[fut]
                 ph = cells[(name, "portrait")]
                 try:
-                    img = fut.result()
+                    img, fallback = fut.result()
                     images.setdefault(name, {})["portrait"] = img
-                    ph.image(img, caption=VIEWS["portrait"], use_container_width=True)
-                except flux.ModerationError:
-                    ph.warning(f"{VIEWS['portrait']}: prompt was moderated — skipped.")
-                except Exception as e:  # noqa: BLE001 — surface any API error to the client
+                    cap = VIEWS["portrait"] + (" (from full-body)" if fallback else "")
+                    ph.image(img, caption=cap, use_container_width=True)
+                except Exception as e:  # noqa: BLE001 — no full-body either
                     ph.error(f"{VIEWS['portrait']}: failed — {e}")
                 done += 1
                 _tick("close-ups")
