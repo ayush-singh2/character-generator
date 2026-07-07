@@ -20,6 +20,11 @@ manuscript/
 Referance_book/
 Illustration_guide/
 
+# client-supplied material — confidential, never publish
+CLIENT_DOC/
+data/reference_images/
+*.log
+
 # archives & tooling
 .archive_anthology/
 .archive_manuscripts/
@@ -27,3 +32,6 @@ Illustration_guide/
 
 # os
 .DS_Store
+
+# archived finished books (moved here before each new generation)
+.archive_books/

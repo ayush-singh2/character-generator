@@ -21,6 +21,7 @@ import json
 import os
 
 from . import flux
+from . import motifs
 from .llm import chat_json
 from .picturebook import ZONE_CYCLE
 from .style import load_style_prompt
@@ -59,21 +60,31 @@ Rules:
 - COMPOSITION IS CRITICAL: place ALL characters, faces, and the main action
   within roughly 60% of the frame on the side OPPOSITE the empty side. The EMPTY
   SIDE (about 40% of the width, full height) holds the page's words.
-- THE BACKGROUND MUST FILL THE ENTIRE FRAME EDGE TO EDGE as ONE continuous
-  painted illustration. The empty side is the SAME environment continued — the
-  same wall, floor, sky, ambient colour, lighting and soft watercolour texture —
-  just with fewer objects and characters. It is quiet, but it is still fully
-  painted background. ABSOLUTELY DO NOT leave any part of the canvas blank,
-  white, paper-coloured, or as a separate flat panel, and DO NOT create any
-  vertical dividing line or seam between the two sides. It must look like one
-  seamless scene whose left/right simply has more/less going on.
+- THE TEXT AREA MUST BE GENUINELY CALM (this is how a real picture book leaves
+  room for words — study any human-illustrated page: the text sits on open sky, a
+  soft plain wall, a gentle colour wash, or a blurred distant background). So the
+  EMPTY SIDE must be a SMOOTH, LOW-DETAIL, EVENLY-TONED region — open sky, a soft
+  plain wash of the ambient colour, gently blurred far background — with NO busy
+  texture, NO detailed objects, NO wood-grain/foliage/pattern detail, and enough
+  tonal calm and contrast that dark or light text laid over it stays legible.
+- Keep it full-bleed: the calm side is the SAME environment and colour family
+  continued (so it reads as one scene), just simplified almost to a plain wash.
+  Do NOT hard-cut to white/paper, and do NOT draw a panel divide or seam — let the
+  detailed side melt gradually into the quiet, simplified text side.
 - If several characters are present (friends, a crowd), CLUSTER them tightly
   together on the character side — never spread them across the full width. Keep
   a small group (2-4 kids is enough to suggest "friends"); the empty side stays
   wide open.
-- Honour the ART DIRECTION note if present (e.g. a montage of "different kids in
-  different kitchens" => small vignettes clustered on the character side; a
-  "spread" => a wide scene that still leaves the empty side open).
+- The ART DIRECTION note is AUTHORITATIVE staging: place every element it names,
+  in the position and mood it specifies (e.g. "hawk circling high above, small in
+  the sky, top corner" => draw exactly that; "Sparky does not look afraid while
+  the others flee" => stage that contrast). Do not omit or relocate what it asks.
+- Obey the LAYOUT line: a SPREAD is one seamless wide scene with the subject off
+  the gutter; SPOT means the given number of small separate vignettes floating on
+  a soft plain background (not one full-bleed scene); single is full-bleed.
+- If an ACTION TO STAGE line is given, make those verbs read at a glance — put the
+  described motion cues (streaming tails, lifted sniffing nose + scent wisps, wide
+  fearful eyes, mid-leap arc) into the scene_prompt so the action is unmistakable.
 - RESTATE each present character's identity (face, hair, age) and outfit so they
   stay consistent page to page.
 - Render NO text, letters, words, or numbers anywhere in the image.
@@ -82,7 +93,7 @@ Return STRICT JSON only:
 {
   "characters_present": ["<exact bible names in scene; [] if none>"],
   "moment": "<the single moment to depict, one sentence>",
-  "scene_prompt": "<complete Flux prompt: the moment; explicitly state the characters/action are clustered on the <opposite> side while the SAME background environment (wall/floor/sky, same colours + soft watercolour texture) continues seamlessly across the WHOLE frame into the quieter <empty side>; say 'full-bleed continuous illustration, background fills the entire frame edge to edge, no blank or white areas, no panel divide or seam'; lighting, mood, restated character identities + outfits; end with 'no text or letters in the image'>"
+  "scene_prompt": "<complete Flux prompt: the moment; explicitly state the characters/action are clustered on the <opposite> side; then explicitly describe the <empty side> as a CALM, SIMPLIFIED, LOW-DETAIL area — open sky / a soft plain wash of the ambient colour / a gently blurred distant background — smooth and evenly toned with generous uncluttered negative space for text, NO busy texture or detailed objects there, tonally calm enough that text stays legible; say 'full-bleed continuous illustration, one seamless scene, no white border, no panel divide or seam, the detailed side melting gradually into the quiet simplified <empty side>'; lighting, mood, restated character identities + outfits; end with 'no text or letters in the image'>"
 }
 Use only names from the roster."""
 
@@ -126,21 +137,47 @@ def _render(prompt, ref_imgs):
         return flux.generate(prompt)
 
 
+def _layout_directive(unit) -> str:
+    """Translate the manuscript's page layout into composition guidance."""
+    layout = unit.get("layout", "single")
+    if layout == "spot":
+        n = unit.get("spot_count") or 2
+        return (f"LAYOUT: {n} SPOT illustrations — compose {n} small separate "
+                f"vignette scenes (one per beat of the art direction), each "
+                f"floating on a soft plain background, NOT one full-bleed scene.")
+    if layout == "spread":
+        return ("LAYOUT: two-page SPREAD — one seamless wide scene; keep the "
+                "main subject clear of the vertical centre (the gutter).")
+    return "LAYOUT: single full-bleed page."
+
+
 def plan_scene(unit, empty_side, bible, style_prompt):
     art_dir = unit.get("art_direction") or "(none)"
     other = "RIGHT" if empty_side == "left" else "LEFT"
+    # The writer's Illustration note stages the shot; motifs make the verbs read.
+    action = motifs.annotate(unit.get("text", ""), unit.get("art_direction", ""))
+    emphasis = motifs.emphasis_words(unit.get("text", ""))
     user = (
         f"ART STYLE: {style_prompt}\n"
         f"EMPTY SIDE (leave open for text): {empty_side.upper()} ~40% of the frame\n"
         f"CHARACTER/ACTION SIDE: {other} ~60%\n"
-        f"ART DIRECTION NOTE: {art_dir}\n\n"
-        f"CHARACTER ROSTER:\n{_compact_bible(bible)}\n\n"
+        f"{_layout_directive(unit)}\n"
+        f"ART DIRECTION NOTE (authoritative staging — follow it exactly, place "
+        f"every element it names): {art_dir}\n"
+        + (f"ACTION TO STAGE: {action}\n" if action else "")
+        + f"\nCHARACTER ROSTER:\n{_compact_bible(bible)}\n\n"
         f"PAGE TEXT:\n{unit['text']}"
     )
     spec = chat_json(SCENE_SYSTEM, user, max_tokens=1200, temperature=0.5)
+    # Belt-and-suspenders: fold the action cues straight into the Flux prompt so
+    # the motion survives even if the planner under-weights them.
+    if action and action.lower() not in spec.get("scene_prompt", "").lower():
+        spec["scene_prompt"] = f"{spec.get('scene_prompt','')} {action}"
     if style_prompt and style_prompt.lower() not in spec.get("scene_prompt", "").lower():
         spec["scene_prompt"] = f"{spec.get('scene_prompt','')}. Art style: {style_prompt}"
     spec["text_region"] = empty_side        # left/right zone the renderer pins to
+    spec["layout"] = unit.get("layout", "single")
+    spec["emphasis_words"] = emphasis       # shout/onomatopoeia for the renderer
     return spec
 
 

@@ -13,7 +13,7 @@ import argparse
 import json
 import os
 
-from . import characters, picturebook, refs, storybook, style
+from . import archive, characters, picturebook, refs, storybook, style
 from . import pb_illustrate
 
 STAGES = ["parse", "style", "characters", "refs", "art", "book"]
@@ -27,6 +27,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from", dest="start", choices=STAGES, default="parse")
     ap.add_argument("--docx", help="manuscript .docx (else first in manuscript/)")
+    ap.add_argument("--no-archive", action="store_true",
+                    help="don't move the previous book into .archive_books first")
     args = ap.parse_args()
     if args.docx:
         os.environ["STORYBOOK_DOCX"] = args.docx
@@ -34,6 +36,14 @@ def main():
 
     def active(name):
         return STAGES.index(name) >= start
+
+    # A fresh generation (from 'parse') would clobber the previous book. Stow it
+    # in .archive_books/<name>__<timestamp>/ first so output/ starts clean. Only
+    # on a full run — a resume (--from refs/art/…) must keep its work in place.
+    if active("parse") and not args.no_archive:
+        dest = archive.archive_current(reason="new book generation")
+        if dest:
+            print(f"\n== archive ==\n  previous book -> {dest}")
 
     if active("parse"):
         print("\n== parse ==")

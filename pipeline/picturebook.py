@@ -548,7 +548,9 @@ def build(limit=None):
         elif kind == "backmatter":
             page = render_backmatter(unit)
         else:
-            scene = scenes.get(unit["label"]) or scenes.get(str(unit["pages"][0]))
+            first_page = unit["pages"][0] if unit.get("pages") else None
+            scene = (scenes.get(unit["label"])
+                     or (scenes.get(str(first_page)) if first_page is not None else None))
             page = render_content(unit, scene, body_size, body_fonts)
         page.save(os.path.join(OUT_DIR, f"unit_{i:02d}_{kind}.png"))
         pages.append(page)

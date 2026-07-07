@@ -23,8 +23,9 @@ import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
 
-from pipeline import extract, flux, refs
+from pipeline import extract, flux, refs, storybook
 from pipeline.characters import draft_bible, mine_roster
+from pipeline.llm import chat_json_image
 from pipeline.style import STYLE_CATALOG, judge
 
 load_dotenv()
@@ -70,6 +71,41 @@ _require_password()
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
+def build_doc_from_docx(uploaded, title: str, author: str) -> dict:
+    """Parse an 'Illustration Notes' .docx manuscript into the analysis doc shape.
+
+    Uses the real picture-book parser, so page directives, spot/spread layout,
+    the character bible and the illustrator note all come through. The story
+    text (art-direction stripped) feeds style + character mining exactly as the
+    CLI pipeline does; the extra structure is stashed for later generation.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+        tmp.write(uploaded.getbuffer())
+        path = tmp.name
+    sb = storybook.parse(path)                 # rich picture-book units
+    doc = storybook.as_manuscript_doc(sb)      # {title, author, pages:[...]}
+    doc["title"] = title or sb.get("title") or "Untitled"
+    doc["author"] = author or sb.get("author") or "Unknown"
+    doc["num_pages"] = len(doc["pages"])
+    doc["source_docx"] = path
+    # carry the picture-book extras through for the generation phase
+    doc["storybook"] = sb
+    doc["characters_hint"] = sb.get("characters", [])
+    doc["illustrator_note"] = sb.get("illustrator_note", "")
+    # surface any photos embedded in the manuscript so the user can see them and
+    # crop one subject per character for exact-likeness references
+    try:
+        import zipfile
+        z = zipfile.ZipFile(path)
+        doc["reference_images_bytes"] = [
+            z.read(n) for n in sorted(z.namelist())
+            if "media/" in n and n.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+        ]
+    except Exception:  # noqa: BLE001
+        doc["reference_images_bytes"] = []
+    return doc
+
+
 def build_doc_from_text(text: str, title: str, author: str) -> dict:
     """Wrap pasted prose in the same doc shape extract.py produces."""
     return {
@@ -165,6 +201,61 @@ def generate_close(prompt: str, reference: bytes | None, attempts: int = 3) -> b
     raise last
 
 
+def describe_reference(image_bytes: bytes, name: str) -> str:
+    """Vision-caption a reference photo into concrete, literal attributes.
+
+    Conditioning Flux on the photo alone loses details (a strong style prompt
+    overrides the hat, glasses, outfit colours). Feeding these exact attributes
+    back into the text prompt is what makes "every detail match" actually work.
+    """
+    sysd = (
+        "You are a precise visual describer helping an illustrator copy a real "
+        f"subject exactly. Describe ONLY the single main subject ({name}); ignore "
+        f"any background people or animals unless {name} itself is that animal.")
+    userd = (
+        "Describe the subject literally for exact reproduction: species/type, "
+        "headwear, eyewear, hairstyle + length + colour (or fur/coat colour + "
+        "markings), facial features, skin tone, approximate age, body build, top "
+        "(colour), bottom (colour), footwear, accessories. Be explicit about "
+        'COLOURS. Return JSON {"description":"..."} as one dense sentence.')
+    try:
+        return chat_json_image(sysd, userd, image_bytes, mime="image/png").get(
+            "description", "")
+    except Exception as e:  # noqa: BLE001
+        print(f"[describe_reference] {name}: {e}", flush=True)
+        return ""
+
+
+def _exact_likeness(prompt: str, name: str, caption: str = "") -> str:
+    """Wrap a prompt so Flux reproduces the subject in the reference photo exactly."""
+    detail = (f" {name} looks EXACTLY like this — reproduce every detail: {caption}."
+              if caption else "")
+    return (
+        f"The attached image is a REAL reference photo of {name}. Reproduce {name} "
+        "EXACTLY as they appear — same headwear, eyewear, hairstyle and hair length "
+        "(ponytail, braids, bun, long, short, bald), facial features and expression, "
+        "skin tone, body build, age, and the same clothing and accessories with the "
+        f"same COLOURS.{detail} Do NOT invent a different-looking subject or change "
+        "the outfit. Only re-render them in this illustration style: " + prompt
+    )
+
+
+def generate_view_ref(prompt: str, references: list[bytes], attempts: int = 3) -> bytes:
+    """Generate a view conditioned on reference photo(s) for exact likeness."""
+    last = None
+    for i in range(1, attempts + 1):
+        try:
+            return flux.edit(prompt, references)
+        except flux.ModerationError:
+            raise
+        except Exception as e:  # noqa: BLE001 — transient; retry then surface
+            last = e
+            print(f"[generate_view_ref] attempt {i}/{attempts} failed: {e}", flush=True)
+            if i < attempts:
+                time.sleep(2 * i)
+    raise last
+
+
 # ── sidebar / settings ─────────────────────────────────────────────────────
 st.title("🎭 Character Generator")
 st.caption(
@@ -194,7 +285,15 @@ with st.sidebar:
 
 # ── step 1: manuscript input ───────────────────────────────────────────────
 st.subheader("1 · Provide the manuscript")
-tab_pdf, tab_text = st.tabs(["Upload PDF", "Paste text"])
+tab_docx, tab_pdf, tab_text = st.tabs(
+    ["Upload manuscript (.docx)", "Upload PDF", "Paste text"])
+with tab_docx:
+    docx_file = st.file_uploader(
+        "Illustration-Notes .docx", type=["docx"],
+        help="The writer's manuscript with Page directives and Illustration: notes.")
+    if docx_file:
+        st.caption("✓ Page layout, spot/spread structure, character bible and "
+                   "illustrator note are parsed automatically.")
 with tab_pdf:
     pdf_file = st.file_uploader("Manuscript PDF", type=["pdf"])
 with tab_text:
@@ -205,8 +304,8 @@ title = col_t.text_input("Title (optional override)")
 author = col_a.text_input("Author (optional override)")
 
 if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True):
-    if not pdf_file and not text_input.strip():
-        st.warning("Upload a PDF or paste some text first.")
+    if not docx_file and not pdf_file and not text_input.strip():
+        st.warning("Upload a .docx or PDF, or paste some text first.")
     else:
         st.subheader("📋 Processing — live activity")
         t0 = time.time()
@@ -221,11 +320,12 @@ if st.button("🔍 Analyze manuscript", type="primary", use_container_width=True
             t = time.time()
             tick("reading manuscript…")
             st.write("📖 **Reading manuscript** — extracting text…")
-            doc = (
-                build_doc_from_pdf(pdf_file, title, author)
-                if pdf_file
-                else build_doc_from_text(text_input, title, author)
-            )
+            if docx_file:
+                doc = build_doc_from_docx(docx_file, title, author)
+            elif pdf_file:
+                doc = build_doc_from_pdf(pdf_file, title, author)
+            else:
+                doc = build_doc_from_text(text_input, title, author)
             words = sum(len(p.get("text", "").split()) for p in doc["pages"])
             st.session_state["doc"] = doc
             st.write(
@@ -379,6 +479,29 @@ if "bible" in st.session_state:
     n_sel = len(chosen)
     st.caption(f"**{n_sel}** selected → **{n_sel * 2}** images (~${n_sel * 2 * 0.07:.2f}).")
 
+    # ── per-character reference photos (exact likeness) ──────────────────────
+    with st.expander("📎 Reference photo per character — for EXACT likeness", expanded=False):
+        st.caption(
+            "Upload a clear photo of a character (a real person or pet) and the "
+            "generated art will match it exactly — hairstyle, face, build, "
+            "clothing. Best with a clean photo of just that one subject."
+        )
+        doc0 = st.session_state.get("doc", {})
+        embedded = doc0.get("reference_images_bytes") or []
+        if embedded:
+            st.caption(f"ℹ️ {len(embedded)} photo(s) were embedded in the manuscript — "
+                       "shown below. Crop to one subject and upload per character for "
+                       "the sharpest match.")
+            st.image(embedded, width=110)
+        rcols = st.columns(2)
+        for i, name in enumerate(chosen):
+            up = rcols[i % 2].file_uploader(
+                f"📷 {name}", type=["png", "jpg", "jpeg", "webp"],
+                key=f"ref_{name}")
+            if up is not None:
+                rcols[i % 2].image(up, width=90, caption=f"{name} reference")
+    st.session_state["_chosen_names"] = chosen
+
     with st.expander("View character bible (LLM-designed details)"):
         for c in st.session_state["bible"]:
             st.markdown(
@@ -392,6 +515,25 @@ if "bible" in st.session_state:
         # Fresh set each run so a style change fully replaces the images.
         images: dict = {}
         bible_by_name = {c["name"]: c for c in st.session_state["bible"]}
+
+        # Per-character reference photos → condition generation for EXACT likeness.
+        char_refs: dict = {}
+        for name in chosen_unique:
+            up = st.session_state.get(f"ref_{name}")
+            if up is not None:
+                try:                       # normalise any upload to PNG bytes
+                    img = Image.open(BytesIO(up.getvalue())).convert("RGB")
+                    b = BytesIO(); img.save(b, format="PNG")
+                    char_refs[name] = b.getvalue()
+                except Exception:  # noqa: BLE001
+                    pass
+        # Vision-caption each reference once so the exact attributes land in the prompt.
+        char_caption: dict = {}
+        if char_refs:
+            with st.spinner("Reading reference photos…"):
+                for name, b in char_refs.items():
+                    char_caption[name] = describe_reference(b, name)
+            st.caption("📷 Exact-likeness references in use for: " + ", ".join(char_refs))
 
         # Two images per chosen character: a full-body turnaround and a close-up.
         VIEWS = {"portrait": "Close view — face / bust", "full_body": "Full view — front / side / back"}
@@ -451,11 +593,17 @@ if "bible" in st.session_state:
         # ── Phase A: full-body turnarounds (parallel) ───────────────────────
         # These come first so each close-up can be generated FROM its own
         # turnaround, keeping the two views the same character.
+        def _fullbody_task(name):
+            if name in char_refs:          # exact-likeness: caption + condition on photo
+                lean = (f"full-body children's book character illustration of {name} "
+                        f"standing in a neutral pose, plain background. {style_prompt}")
+                return generate_view_ref(
+                    _exact_likeness(lean, name, char_caption.get(name, "")),
+                    [char_refs[name]])
+            return generate_view(refs.full_body_prompt(bible_by_name[name], style_prompt))
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
-            futs = {
-                ex.submit(generate_view, refs.full_body_prompt(bible_by_name[name], style_prompt)): name
-                for name in chosen_unique
-            }
+            futs = {ex.submit(_fullbody_task, name): name for name in chosen_unique}
             for fut in concurrent.futures.as_completed(futs):
                 name = futs[fut]
                 ph = cells[(name, "full_body")]
@@ -471,19 +619,25 @@ if "bible" in st.session_state:
                 _tick("full-body turnarounds")
 
         # ── Phase B: close-ups, edited FROM each full-body reference ─────────
+        def _closeup_task(name):
+            has_fb = bool(images.get(name, {}).get("full_body"))
+            fb_crop = crop_front_figure(images[name]["full_body"]) if has_fb else None
+            if name in char_refs:
+                # Exact likeness: condition on the real photo FIRST, plus the
+                # matching full-body so the two views stay the same character.
+                lean = (f"head-and-shoulders close-up portrait of {name}, facing "
+                        f"forward, plain background. {style_prompt}")
+                ref_list = [char_refs[name]] + ([fb_crop] if fb_crop else [])
+                return generate_view_ref(
+                    _exact_likeness(lean, name, char_caption.get(name, "")), ref_list)
+            if has_fb:
+                return generate_close(
+                    refs.close_up_edit_prompt(bible_by_name[name], style_prompt), fb_crop)
+            return generate_close(
+                refs.portrait_prompt(bible_by_name[name], style_prompt), None)
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
-            futs = {
-                ex.submit(
-                    generate_close,
-                    refs.close_up_edit_prompt(bible_by_name[name], style_prompt)
-                    if images.get(name, {}).get("full_body")
-                    else refs.portrait_prompt(bible_by_name[name], style_prompt),
-                    crop_front_figure(images[name]["full_body"])
-                    if images.get(name, {}).get("full_body")
-                    else None,
-                ): name
-                for name in chosen_unique
-            }
+            futs = {ex.submit(_closeup_task, name): name for name in chosen_unique}
             for fut in concurrent.futures.as_completed(futs):
                 name = futs[fut]
                 ph = cells[(name, "portrait")]
