@@ -15,14 +15,23 @@ Out:  output/refs/<slug>/portrait.png, full_body.png  +  data/refs.json
 import json
 import os
 import re
+from io import BytesIO
+
+from PIL import Image
 
 from . import flux
+from .llm import chat_json_image
 from .style import load_style_prompt
 
 IN_PATH = "data/characters.json"
 STORYBOOK_PATH = "data/storybook.json"
 REFS_DIR = "output/refs"
 MANIFEST = "data/refs.json"
+# Clean per-character reference crops the user drops in as <slug>.png/jpg — the
+# reliable path for EXACT likeness (one subject per image, unlike the multi-
+# subject photos embedded in the manuscript).
+CHAR_REFS_DIR = "data/char_refs"
+_REF_EXT = (".png", ".jpg", ".jpeg", ".webp")
 
 
 def slug(name: str) -> str:
@@ -81,6 +90,71 @@ def load_reference_photos() -> tuple[list[bytes], list[str]]:
     paths = doc.get("reference_images") or []
     photos = [open(p, "rb").read() for p in paths if os.path.exists(p)]
     return photos, doc.get("photo_ref_characters") or []
+
+
+def char_ref_image(name: str) -> bytes | None:
+    """A clean per-character reference crop from data/char_refs/<slug>.*, if any.
+
+    Normalised to PNG bytes so the vision-caption and Flux data-URL mime match.
+    """
+    for ext in _REF_EXT:
+        p = os.path.join(CHAR_REFS_DIR, slug(name) + ext)
+        if os.path.exists(p):
+            try:
+                img = Image.open(p).convert("RGB")
+                buf = BytesIO(); img.save(buf, format="PNG")
+                return buf.getvalue()
+            except Exception:  # noqa: BLE001
+                return open(p, "rb").read()
+    return None
+
+
+def describe_reference(image_bytes: bytes, name: str) -> str:
+    """Vision-caption a reference photo into concrete literal attributes.
+
+    Conditioning on the photo alone loses details (a strong style prompt
+    overrides the hat / glasses / outfit colours). Feeding these exact
+    attributes back into the text prompt is what makes every detail match.
+    """
+    sysd = (
+        "You are a precise visual describer helping an illustrator copy a real "
+        f"subject exactly. Describe ONLY the single main subject ({name}); ignore "
+        f"any background people or animals unless {name} itself is that animal.")
+    userd = (
+        "Describe the subject literally for exact reproduction: species/type, "
+        "headwear, eyewear, hairstyle + length + colour (or fur/coat colour + "
+        "markings), facial features, skin tone, approximate age, body build, top "
+        "(colour), bottom (colour), footwear, accessories. Be explicit about "
+        'COLOURS. Return JSON {"description":"..."} as one dense sentence.')
+    try:
+        return chat_json_image(sysd, userd, image_bytes, mime="image/png").get(
+            "description", "")
+    except Exception as e:  # noqa: BLE001
+        print(f"   [describe_reference] {name}: {str(e)[:80]}")
+        return ""
+
+
+def _exact_likeness(prompt: str, name: str, caption: str = "") -> str:
+    """Hard likeness wrapper with the vision caption injected."""
+    detail = (f" {name} looks EXACTLY like this — reproduce every detail: {caption}."
+              if caption else "")
+    return (
+        f"The attached image is a REAL reference photo of {name}. Reproduce {name} "
+        "EXACTLY — same headwear, eyewear, hairstyle and length (or fur/coat colour "
+        "and markings), facial features, skin tone, body build, age, and the same "
+        f"clothing and accessories with the same COLOURS.{detail} Do NOT invent a "
+        "different-looking subject or change the outfit. Only re-render in: " + prompt
+    )
+
+
+def _lean_fullbody(name: str, style_prompt: str) -> str:
+    return (f"full-body character reference of {name} standing in a neutral A-pose, "
+            f"head to feet, plain white background. {_style(style_prompt)}")
+
+
+def _lean_portrait(name: str, style_prompt: str) -> str:
+    return (f"head-and-shoulders portrait close-up of {name}, facing forward, plain "
+            f"background. {_style(style_prompt)}")
 
 
 def _likeness(prompt: str, name: str) -> str:
@@ -235,6 +309,13 @@ def build_refs(only: list[str] | None = None, force: bool = False) -> dict:
     manifest = json.load(open(MANIFEST)) if os.path.exists(MANIFEST) else {}
     os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
 
+    # Clean per-character crops for EXACT likeness (data/char_refs/<slug>.png).
+    crops_for = [c["name"] for c in data["bible"] if char_ref_image(c["name"])]
+    if crops_for:
+        print(f"Exact-likeness crops found in {CHAR_REFS_DIR}/ for: {crops_for}")
+    else:
+        print(f"(tip: drop clean crops in {CHAR_REFS_DIR}/<name>.png for EXACT likeness)")
+
     # Real reference photos embedded in the manuscript → condition Flux on them
     # so the illustrated character actually resembles the real subject.
     photos, photo_names = load_reference_photos()
@@ -259,27 +340,51 @@ def build_refs(only: list[str] | None = None, force: bool = False) -> dict:
             manifest[name] = {"slug": s, "portrait": p_path, "full_body": b_path}
             continue
 
-        use_photo = name in likeness_for
-        tag = " (photo likeness)" if use_photo else ""
-        print(f"[{name}] generating portrait + full_body{tag} ...")
-        p_prompt = portrait_prompt(c, style_prompt)
-        b_prompt = full_body_prompt(c, style_prompt)
-        if use_photo:
-            portrait = _edit_safe(_likeness(p_prompt, name), photos, f"{name} portrait")
+        # Resolve the strongest reference for this character:
+        #  1. a clean per-character crop in data/char_refs → EXACT likeness
+        #     (vision-caption + inject details + condition on that one photo)
+        #  2. else the manuscript's embedded photos → 90% likeness
+        #  3. else text-only
+        crop = char_ref_image(name)
+        if crop is not None:
+            caption = describe_reference(crop, name)
+            print(f"[{name}] generating portrait + full_body (EXACT likeness) ...")
+            if caption:
+                print(f"   caption: {caption[:110]}")
+            portrait = _edit_safe(
+                _exact_likeness(_lean_portrait(name, style_prompt), name, caption),
+                [crop], f"{name} portrait")
+            flux.save(portrait, p_path)
+            try:
+                body = _edit_safe(
+                    _exact_likeness(_lean_fullbody(name, style_prompt), name, caption),
+                    [crop], f"{name} full_body")
+            except flux.ModerationError:
+                print(f"   [{name}] full_body still moderated — falling back to portrait")
+                body = portrait
+            flux.save(body, b_path)
         else:
-            portrait = _generate_safe(p_prompt, f"{name} portrait")
-        flux.save(portrait, p_path)
-        try:
+            use_photo = name in likeness_for
+            tag = " (photo likeness)" if use_photo else ""
+            print(f"[{name}] generating portrait + full_body{tag} ...")
+            p_prompt = portrait_prompt(c, style_prompt)
+            b_prompt = full_body_prompt(c, style_prompt)
             if use_photo:
-                body = _edit_safe(_likeness(b_prompt, name), photos, f"{name} full_body")
+                portrait = _edit_safe(_likeness(p_prompt, name), photos, f"{name} portrait")
             else:
-                body = _generate_safe(b_prompt, f"{name} full_body")
-        except flux.ModerationError:
-            # Both raw and sanitized full-body were refused — don't kill the whole
-            # book over one ref sheet; reuse the portrait so pages still generate.
-            print(f"   [{name}] full_body still moderated — falling back to portrait")
-            body = portrait
-        flux.save(body, b_path)
+                portrait = _generate_safe(p_prompt, f"{name} portrait")
+            flux.save(portrait, p_path)
+            try:
+                if use_photo:
+                    body = _edit_safe(_likeness(b_prompt, name), photos, f"{name} full_body")
+                else:
+                    body = _generate_safe(b_prompt, f"{name} full_body")
+            except flux.ModerationError:
+                # Both raw and sanitized full-body were refused — don't kill the whole
+                # book over one ref sheet; reuse the portrait so pages still generate.
+                print(f"   [{name}] full_body still moderated — falling back to portrait")
+                body = portrait
+            flux.save(body, b_path)
         manifest[name] = {"slug": s, "portrait": p_path, "full_body": b_path}
         # Persist after each character so a crash never loses prior work.
         json.dump(manifest, open(MANIFEST, "w"), indent=2, ensure_ascii=False)

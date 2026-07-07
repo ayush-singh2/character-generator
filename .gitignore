@@ -35,3 +35,4 @@ data/reference_images/
 
 # archived finished books (moved here before each new generation)
 .archive_books/
+data/char_refs/
