@@ -116,7 +116,8 @@ def _face(spec: dict) -> str | None:
 
 def _logo(logo: dict) -> str:
     if not logo or logo in ("none", "None") or logo.get("present") is False:
-        return "no logo or print on it"
+        return ("a completely PLAIN blank chest — absolutely NO logo, NO print, "
+                "NO graphic, NO text, NO emblem of any kind on it")
     motif = logo.get("motif", "logo")
     pos = logo.get("position", "")
     coords = logo.get("coords_pct")
@@ -210,8 +211,8 @@ def serialize(spec: dict, name: str = "") -> str:
 
     body = ". ".join(lines)
     who = f" for {name}" if name else ""
-    return (f"EXACT CHARACTER LOCK{who} (reproduce these EXACT details identically, "
-            f"do not vary colours, logo, or features between images): {body}.")
+    return (f"CHARACTER DESIGN{who} (keep these exact details consistent — same "
+            f"colours, logo and features on every page): {body}.")
 
 
 def has_spec(char: dict) -> bool:

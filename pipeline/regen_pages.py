@@ -18,7 +18,8 @@ import sys
 
 from . import flux
 from .pb_illustrate import (ART_DIR, CHARACTERS, REFS, SCENES, STORYBOOK,
-                            _gather_refs, _locks_for, _render, plan_scene)
+                            _compose_prompt, _gather_refs, _locks_for, _render,
+                            plan_scene)
 from .style import load_style_prompt
 
 
@@ -70,11 +71,11 @@ def regen(pages):
         print(f"   present: {present or '(none)'} | {spec.get('moment','')[:70]}")
         # Pin every present character to its EXACT locked spec (deterministic).
         lock = _locks_for(present, bible)
+        prompt = _compose_prompt(spec["scene_prompt"], lock, present, refs)
         if lock:
-            spec["scene_prompt"] += "\n\n" + lock
             print(f"   locked spec applied for: "
                   f"{[n for n in present if any(c['name']==n and c.get('locked_spec') for c in bible)]}")
-        img = _render(spec["scene_prompt"], _gather_refs(present, refs))
+        img = _render(prompt, _gather_refs(present, refs))
         flux.save(img, path)
         spec["image"] = path
         scenes[unit["label"]] = spec

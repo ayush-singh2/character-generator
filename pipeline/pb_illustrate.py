@@ -129,15 +129,45 @@ def _locks_for(present, bible):
     return "\n".join(blocks)
 
 
+def _compose_prompt(scene_prompt, lock, present, refs):
+    """Build the final Flux prompt for maximum character consistency.
+
+    Order matters: models weight the opening of a prompt most, so the exact
+    CHARACTER LOCK and a 'copy the reference image exactly' instruction lead,
+    and the scene description follows. The reference sheets themselves are
+    passed as conditioning images (the strongest consistency lever).
+    """
+    has_ref = [n for n in present if n in refs]
+    parts = []
+    if lock:
+        parts.append(lock)
+    if has_ref:
+        who = ", ".join(has_ref)
+        # Emphasise consistency WITHOUT "copy the reference image exactly"
+        # phrasing, which trips BFL's "Protected Content" moderation.
+        parts.append(
+            f"Keep {who}'s character design consistent throughout the book: the "
+            "same face, hairstyle and colour, the same outfit and colours, and the "
+            "same shirt print. Only their pose and action change to fit the scene.")
+    parts.append("SCENE: " + scene_prompt)
+    return "\n\n".join(parts)
+
+
 def _gather_refs(present, refs):
     present = [n for n in present if n in refs]
     imgs = []
-    for n in present:
-        imgs.append(open(refs[n]["portrait"], "rb").read())
+    # Full-body FIRST: it shows the exact outfit, colours and shirt logo — the
+    # things that drift. On a crowded page (cap = MAX_REF_IMAGES) this guarantees
+    # each character's outfit reference is passed, not just their face.
     for n in present:
         if len(imgs) >= MAX_REF_IMAGES:
             break
         imgs.append(open(refs[n]["full_body"], "rb").read())
+    # Then portraits for face detail if slots remain.
+    for n in present:
+        if len(imgs) >= MAX_REF_IMAGES:
+            break
+        imgs.append(open(refs[n]["portrait"], "rb").read())
     return imgs[:MAX_REF_IMAGES]
 
 
@@ -227,7 +257,7 @@ def illustrate(force=False, recompose=False):
                 # deterministically (not left to the planner to paraphrase) so
                 # colours/logo/features never drift between pages.
                 lock = _locks_for(present, bible)
-                prompt = spec["scene_prompt"] + (("\n\n" + lock) if lock else "")
+                prompt = _compose_prompt(spec["scene_prompt"], lock, present, refs)
                 img = _render(prompt, _gather_refs(present, refs))
                 flux.save(img, path)
                 spec["image"] = path

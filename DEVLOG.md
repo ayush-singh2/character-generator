@@ -8,6 +8,27 @@ and the files touched.
 
 ---
 
+## v1.1 — Best prompt-based consistency method (2026-07-08)
+**Problem:** even with the locked spec, Ella's logo/shoe/shirt-colour drifted
+between pages. Tried post-compositing a fixed logo PNG (`logo_composite.py`) but
+it was too inaccurate (occluded chests, double-logos, mis-placement) — reverted.
+**Change:** the realistic best is prompt-based, built from four levers:
+1. **Reference-image conditioning** — every page uses `flux.edit` with the
+   character's reference sheets as input images (strongest lever).
+2. **Lead-with-design** — `_compose_prompt` puts the exact CHARACTER DESIGN
+   block + a consistency reminder FIRST, then the scene (models weight the
+   opening most); the lock was previously appended at the weak end.
+3. **Full-body-first refs** — `_gather_refs` sends full-bodies before portraits,
+   so on crowded pages (cap 4) the outfit/logo reference isn't bumped out.
+4. **BFL-safe wording** — dropped "copy the reference exactly / reproduce
+   identically" (trips BFL "Protected Content" moderation) for "keep the design
+   consistent — same outfit and colours".
+Gives strong outfit/colour/logo-presence consistency; not pixel-identical logos
+(model redraws freehand each page — an architecture limit, not a prompt gap).
+**Files:** `pipeline/pb_illustrate.py` (`_compose_prompt`, full-body-first
+`_gather_refs`), `pipeline/regen_pages.py`, `pipeline/charspec.py` (softer lock
+wording), `pipeline/logo_composite.py` (kept as optional tool, not default).
+
 ## v1.0 — Apply locked spec to an existing book; regen pages 8–9 (2026-07-08)
 **Change:** to give an already-generated book cross-page consistency,
 `refs.locked_spec_from_ref` vision-reads a character's existing reference sheet
