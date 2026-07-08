@@ -8,6 +8,56 @@ and the files touched.
 
 ---
 
+## v1.4 — Closed-loop negative space + white-blur text + watch audit (2026-07-08)
+**Problem:** after v1.3 the full-bleed text-on-art still (a) overlapped subjects
+on pages whose art filled the whole frame (no empty band existed), and (b) sat
+too bare on the background — the client wanted the "slight white blur" behind
+text seen in the reference interiors. The watch also still flipped wrists on
+some poses.
+**Fixes:**
+- `picturebook.py`: `_adaptive_scrim` now lays a soft, always-on **light bloom**
+  behind text (subtle on calm art, stronger on busy art) — the reference "white
+  blur", never a boxed card. `render_content` seats text on the **calmest** of
+  {vision box, all four third-zones} so it stops overriding faces/dogs.
+- `pb_illustrate.py`: **closed-loop negative space**. After each page is
+  rendered, `_reserved_side_calm` measures edge-energy of the reserved text band
+  vs the subject band; if the band isn't genuinely empty the page is regenerated
+  with an escalated `_emptiness_boost` directive (up to `PB_NS_TRIES`). Every
+  Ella page now converged to a clean text band. Added an `only=[labels]` arg to
+  `illustrate` for targeted single-page regen (used for the watch).
+- Watch: audited all 15 Ella pages; style (pink square screen, periwinkle strap)
+  is consistent, but handedness follows Flux's pose-mirroring. Targeted-regen of
+  the flipped pages (Page 23) landed the watch back on the LEFT wrist. NOTE: a
+  perfect left-wrist guarantee is not achievable by prompt alone — the model
+  mirrors handedness with the pose.
+**Tunables (env):** `PB_CALM_MAX`, `PB_NS_FLOOR`, `PB_NS_RATIO`, `PB_NS_TRIES`.
+**Output:** clean rebuild snapshotted to
+`runs/output/storybook/art/versions/version3/` (19 pages + cover + PDF).
+**Files:** `pipeline/picturebook.py`, `pipeline/pb_illustrate.py`,
+`pipeline/rebuild_v3.py`.
+
+## v1.3 — Reference-matched text-on-art + pinned watch (2026-07-08)
+**Problem 1 (text/image balance):** the body text was being laid on an opaque
+cream card (`_draw_card_soft`), which reads as a pasted slab — nothing like the
+three client interiors (Run Sparky Run, Bilbo & Obi, Sheep the Llama), which
+place text DIRECTLY on a calm patch of full-bleed art with no box.
+**Fix:** new `_draw_text_on_art` in `picturebook.py`. It measures the local art
+luminance/contrast under the text box, picks deep ink over light art or
+near-white over dark art, and lays a soft feathered halo of the opposite tone
+behind the glyphs so they stay crisp with no rectangle. `render_content` now
+calls it instead of `_draw_card_soft`.
+**Problem 2 (Ella's watch):** the watch flipped left↔right wrist between pages
+and its styling drifted. Root cause: `charspec._accessories` silently dropped
+the `details` field and buried "left wrist" in a comma list, so Flux was free
+to mirror it and re-invent the strap/face.
+**Fix:** `_accessories` now emits `details`, and when an item pins a wrist/hand
+it restates the side emphatically ("ALWAYS on her LEFT wrist and NEVER the
+right … identical style, strap and face on every page"). Ella's `locked_spec`
+watch is enriched to a fully-pinned design (square rounded face, pink/magenta
+digital screen, periwinkle silicone strap). Requires page regen to take effect.
+**Files:** `pipeline/picturebook.py`, `pipeline/charspec.py`,
+`runs/ella-the-animal-shelter-and-you/data/characters.json`.
+
 ## v1.2 — Per-run versioned art folders (2026-07-08)
 **Change:** `pipeline/versions.py` snapshots each art run into
 `output/storybook/art/versions/vN/page_NN/page_NN.png` (+ `cover/`, `manifest.json`),

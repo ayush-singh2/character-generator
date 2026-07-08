@@ -17,8 +17,11 @@ In:   data/storybook.json, data/characters.json, data/refs.json, data/style.json
 Out:  output/storybook/art/page_*.png, cover_art.png  +  data/scenes_pb.json
 """
 
+import io
 import json
 import os
+
+from PIL import Image, ImageFilter
 
 from . import charspec
 from . import flux
@@ -26,6 +29,14 @@ from . import motifs
 from .llm import chat_json
 from .picturebook import ZONE_CYCLE
 from .style import load_style_prompt
+
+# Closed-loop negative-space: after each page we measure the edge-energy of the
+# reserved text band vs the character band. The text side must be clearly calmer
+# (and calm in absolute terms) or the page is regenerated with a stronger
+# emptiness directive. Tunable via env for calibration.
+NS_RATIO = float(os.getenv("PB_NS_RATIO", "0.62"))   # empty < other * ratio
+NS_FLOOR = float(os.getenv("PB_NS_FLOOR", "26"))     # empty < floor (absolute)
+NS_TRIES = int(os.getenv("PB_NS_TRIES", "3"))        # attempts per page
 
 STORYBOOK = "data/storybook.json"
 CHARACTERS = "data/characters.json"
@@ -223,7 +234,40 @@ def plan_scene(unit, empty_side, bible, style_prompt):
     return spec
 
 
-def illustrate(force=False, recompose=False):
+def _reserved_side_calm(img_bytes, empty_side):
+    """Is the reserved text band genuinely low-detail?
+
+    Compares edge-energy of the empty ~40% band against the character ~60%
+    band. Returns (ok, empty_energy, other_energy). The text side must be
+    clearly calmer than the subject side AND calm in absolute terms.
+    """
+    im = (Image.open(io.BytesIO(img_bytes)).convert("L")
+          .filter(ImageFilter.FIND_EDGES).resize((100, 100)))
+    px = list(im.getdata())
+
+    def band(c0, c1):
+        vals = [px[r * 100 + c] for r in range(100) for c in range(c0, c1)]
+        return sum(vals) / len(vals)
+
+    if empty_side == "left":
+        empty, other = band(0, 40), band(45, 100)
+    else:
+        empty, other = band(60, 100), band(0, 55)
+    ok = empty < other * NS_RATIO and empty < NS_FLOOR
+    return ok, empty, other
+
+
+def _emptiness_boost(empty_side):
+    other = "right" if empty_side == "left" else "left"
+    return (f"CRITICAL COMPOSITION RULE: the entire {empty_side.upper()} ~40% of the "
+            f"frame MUST be almost empty — a smooth, plain, evenly-toned wash of the "
+            f"ambient colour (open sky, soft wall, or blurred distance) with absolutely "
+            f"NO characters, animals, objects, props or busy detail in it. Move EVERY "
+            f"subject fully into the {other.upper()} portion of the frame. This empty "
+            f"area is reserved for text and must stay clean and low-detail. ")
+
+
+def illustrate(force=False, recompose=False, only=None):
     doc = json.load(open(STORYBOOK))
     bible = json.load(open(CHARACTERS))["bible"]
     refs = json.load(open(REFS)) if os.path.exists(REFS) else {}
@@ -233,6 +277,7 @@ def illustrate(force=False, recompose=False):
     scenes = json.load(open(SCENES)) if os.path.exists(SCENES) else {}
     content_idx = 0
     failed = []
+    weak = []
     for unit in doc["units"]:
         if unit["kind"] != "content" or not unit.get("text", "").strip():
             continue
@@ -240,14 +285,17 @@ def illustrate(force=False, recompose=False):
         # Alternate which side stays empty for the text, for left/right rhythm.
         empty_side = "left" if content_idx % 2 == 0 else "right"
         content_idx += 1
+        if only and label not in only:
+            continue
         path = os.path.join(ART_DIR, f"page_{unit['pages'][0]:02d}.png")
         done = label in scenes and scenes[label].get("image") and os.path.exists(path)
         # recompose re-illustrates every page with the character-on-one-side,
         # empty-background-on-the-other composition.
-        if done and not force and not recompose:
+        if done and not force and not recompose and not only:
             print(f"[{label}] already illustrated, skipping")
             continue
-        for attempt in (1, 2, 3):
+        best = None  # (img, spec, empty_energy) — kept as fallback if none pass
+        for attempt in range(1, NS_TRIES + 1):
             try:
                 print(f"[{label}] planning (empty side: {empty_side}) attempt {attempt} ...")
                 spec = plan_scene(unit, empty_side, bible, style_prompt)
@@ -257,22 +305,41 @@ def illustrate(force=False, recompose=False):
                 # deterministically (not left to the planner to paraphrase) so
                 # colours/logo/features never drift between pages.
                 lock = _locks_for(present, bible)
-                prompt = _compose_prompt(spec["scene_prompt"], lock, present, refs)
+                scene_prompt = spec["scene_prompt"]
+                # Escalate the emptiness directive on every retry so Flux actually
+                # leaves the reserved text band clean.
+                if attempt > 1:
+                    scene_prompt = _emptiness_boost(empty_side) + scene_prompt
+                prompt = _compose_prompt(scene_prompt, lock, present, refs)
                 img = _render(prompt, _gather_refs(present, refs))
-                flux.save(img, path)
-                spec["image"] = path
-                scenes[label] = spec
-                json.dump(scenes, open(SCENES, "w"), indent=2, ensure_ascii=False)
-                print(f"   -> {path}")
-                break
+
+                ok, empty_e, other_e = _reserved_side_calm(img, empty_side)
+                print(f"   negative-space: {empty_side} band={empty_e:.1f} "
+                      f"vs subject={other_e:.1f} -> {'CALM' if ok else 'too busy'}")
+                if best is None or empty_e < best[2]:
+                    best = (img, spec, empty_e)
+                if ok or attempt == NS_TRIES:
+                    img, spec, _ = best  # save the calmest of the attempts
+                    if not ok:
+                        print(f"   .. kept calmest attempt (no fully-empty side found)")
+                        weak.append(label)
+                    flux.save(img, path)
+                    spec["image"] = path
+                    scenes[label] = spec
+                    json.dump(scenes, open(SCENES, "w"), indent=2, ensure_ascii=False)
+                    print(f"   -> {path}")
+                    break
+                print("   .. reserved side not empty enough — regenerating")
             except Exception as e:
                 print(f"   .. attempt {attempt} failed: {str(e)[:120]}")
-                if attempt == 3:
+                if attempt == NS_TRIES:
                     failed.append(label)
 
     json.dump(scenes, open(SCENES, "w"), indent=2, ensure_ascii=False)
     if failed:
         print(f"\nFailed pages (left on placeholder): {failed}")
+    if weak:
+        print(f"Pages with no fully-empty text band (kept calmest): {weak}")
     return scenes
 
 

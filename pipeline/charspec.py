@@ -163,15 +163,32 @@ def _outfit(spec: dict) -> list[str]:
     return out
 
 
+import re as _re
+
+# Wrist-worn items (watch, bracelet, band) are the ones image models most often
+# flip left↔right between pages, so when the item pins a side we restate it
+# emphatically instead of leaving "left wrist" buried in a comma list.
+_HAND = _re.compile(r"\b(left|right)\b\s+(wrist|hand|arm)", _re.I)
+
+
 def _accessories(spec: dict) -> str | None:
     accs = spec.get("accessories") or []
     parts = []
     for a in accs:
         if not isinstance(a, dict):
             continue
-        c = f" ({_hexc(a['color_hex'])})" if a.get("color_hex") else ""
+        item = str(a.get("item", "accessory"))
+        c = f" in exactly {_hexc(a['color_hex'])}" if a.get("color_hex") else ""
+        det = f", {a['details']}" if a.get("details") else ""
         when = f" [{a['when']}]" if a.get("when") else ""
-        parts.append(f"{a.get('item', 'accessory')}{c}{when}")
+        seg = f"{item}{c}{det}{when}"
+        m = _HAND.search(item)
+        if m:
+            side, limb = m.group(1).lower(), m.group(2).lower()
+            other = "right" if side == "left" else "left"
+            seg += (f" — ALWAYS worn on her {side.upper()} {limb} and NEVER the "
+                    f"{other} {limb}; identical style, strap and face on every page")
+        parts.append(seg)
     return "; ".join(parts) if parts else None
 
 

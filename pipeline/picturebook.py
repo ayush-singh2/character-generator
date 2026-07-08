@@ -231,6 +231,9 @@ ZONE_CYCLE = ["left", "bottom", "right", "top", "bottom", "left", "right", "top"
 # Zones a content card may occupy (centre excluded — can't keep art's middle calm).
 CONTENT_ZONES = ["left", "right", "top", "bottom"]
 CARD_PAD = 40
+# Edge-energy (0-255) below which a text box counts as "calm" — only a subtle
+# light bloom is laid; above it the bloom strengthens into a legibility scrim.
+_CALM_MAX = float(os.getenv("PB_CALM_MAX", "14"))
 _SCRATCH = ImageDraw.Draw(Image.new("L", (8, 8)))
 
 
@@ -323,6 +326,125 @@ def _draw_scrim(canvas, box, feather=58, radius=70):
     canvas.alpha_composite(scrim)
 
 
+def _draw_card_soft(canvas, box, radius=38, alpha=250, feather=11):
+    """A near-OPAQUE cream card with a soft feathered edge + subtle shadow.
+
+    Unlike the faint scrim, this guarantees a genuinely clean background so the
+    text stays fully legible even over busy art — while the feathered edge keeps
+    it from reading as a hard boxed panel.
+    """
+    x0, y0, x1, y1 = box
+    # soft drop shadow lifts the card off busy art
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [x0 + 5, y0 + 9, x1 + 5, y1 + 9], radius=radius, fill=(30, 25, 20, 85))
+    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(16)))
+    # opaque cream fill, then feather only the edge
+    panel = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    ImageDraw.Draw(panel).rounded_rectangle(
+        [x0, y0, x1, y1], radius=radius, fill=CARD + (255,))
+    mask = Image.new("L", canvas.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([x0, y0, x1, y1], radius=radius, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(feather)).point(
+        lambda v: int(v * alpha / 255))
+    panel.putalpha(mask)
+    canvas.alpha_composite(panel)
+
+
+# --------------------------- reference-style text-on-art ---------------------------
+# The three client interiors (Run Sparky Run, Bilbo & Obi, Sheep the Llama) never
+# box the body text: it sits DIRECTLY on a calm patch of full-bleed art. Legibility
+# comes from two things only — (1) the text colour is chosen to contrast the local
+# art (dark ink over light sky/grass, near-white over dark art), and (2) a soft
+# feathered halo in the opposite tone hugs the glyphs so they never smear into the
+# picture. No rectangle, no keyline, no cream slab.
+
+TEXT_LIGHT = (252, 249, 243)   # near-white, for dark art
+TEXT_DARK = INK                # deep ink, for light art
+
+
+def _region_stats(canvas, box):
+    """Mean perceived luminance (0-255) and contrast (stddev) of art under `box`."""
+    x0, y0, x1, y1 = [int(v) for v in box]
+    x0, y0 = max(0, x0), max(0, y0)
+    x1, y1 = min(canvas.width, max(x0 + 1, x1)), min(canvas.height, max(y0 + 1, y1))
+    crop = canvas.convert("RGB").crop((x0, y0, x1, y1)).resize((40, 30))
+    px = list(crop.getdata())
+    lums = [0.299 * r + 0.587 * g + 0.114 * b for r, g, b in px]
+    n = max(1, len(lums))
+    mean = sum(lums) / n
+    var = sum((l - mean) ** 2 for l in lums) / n
+    return mean, var ** 0.5
+
+
+def _adaptive_scrim(canvas, box, dark_bg, alpha, feather=60):
+    """A soft, edge-feathered light bloom behind the text — NO hard border.
+
+    This is the "slight white blur / lightening" real picture books lay behind
+    text so the words lift off the art (see the Bilbo interior: text on blue sky
+    with a soft white wash behind it). Subtle on calm art, stronger when the
+    text sits on a busy subject. Tinted cream over light art, a soft deep tone
+    over dark art (so near-white text still lifts). Never a boxed card.
+    """
+    x0, y0, x1, y1 = [int(v) for v in box]
+    pad = 34
+    mask = Image.new("L", canvas.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [x0 - pad, y0 - pad, x1 + pad, y1 + pad], radius=76, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(feather)).point(
+        lambda v: int(v * alpha / 255))
+    tone = (255, 253, 248) if not dark_bg else (16, 13, 20)
+    scrim = Image.new("RGBA", canvas.size, tone + (255,))
+    scrim.putalpha(mask)
+    canvas.alpha_composite(scrim)
+
+
+def _draw_text_on_art(canvas, text, box, fonts, size, align="center", protect=False):
+    """Render body text directly on the art, reference-book style.
+
+    Picks ink/near-white by the local art luminance and lays a soft feathered
+    halo of the opposite tone behind the glyphs — legible over busy art, yet no
+    boxed card. When `protect` is set (the text had to land on busy art) a soft
+    feathered scrim is laid first so the words never smear into a subject.
+    Returns nothing; mutates `canvas` (RGBA) in place.
+    """
+    x0, y0, x1, y1 = box
+    bw, bh = x1 - x0, y1 - y0
+    w, h, lines, lh = _text_block_size(_SCRATCH, _tokens(text), fonts, size, bw)
+    ty = y0 + max(0, (bh - h) // 2)
+
+    mean, contrast = _region_stats(canvas, box)
+    dark_bg = mean < 130
+    fill = TEXT_LIGHT if dark_bg else TEXT_DARK
+    halo = (18, 14, 12) if not dark_bg else (12, 10, 14)
+    if not dark_bg:
+        halo = (255, 253, 247)          # light art → soft cream bloom lifts dark ink
+
+    # Always lay a soft light bloom behind the text (the reference "slight white
+    # blur"): subtle on calm art, stronger when it must sit on a busy subject.
+    if dark_bg:
+        bloom = 120 if protect else 66
+    else:
+        bloom = 168 if protect else 104
+    _adaptive_scrim(canvas, [x0, ty, x1, ty + h], dark_bg, alpha=bloom)
+
+    # Draw glyphs onto their own layer so we can build a matching blurred halo.
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    _draw_lines(ImageDraw.Draw(layer), lines, x0, ty, lh, fonts, size, align, bw, fill + (255,))
+
+    # Halo strength scales with how busy/contrasty the underlying art is.
+    strength = 150 if contrast > 55 else (110 if contrast > 30 else 80)
+    feather = max(3, int(size * 0.16))
+    alpha = layer.split()[3]
+    halo_mask = alpha.filter(ImageFilter.MaxFilter(3)).filter(
+        ImageFilter.GaussianBlur(feather)).point(lambda v: min(255, int(v * 2.4)))
+    halo_mask = halo_mask.point(lambda v: int(v * strength / 255))
+    halo_layer = Image.new("RGBA", canvas.size, halo + (0,))
+    halo_layer.putalpha(halo_mask)
+    canvas.alpha_composite(halo_layer)   # soft glow first…
+    canvas.alpha_composite(layer)        # …crisp text on top
+
+
 def _page_number(canvas, label, corner="br"):
     nums = re.findall(r"\d+", label)
     if not nums:
@@ -378,25 +500,35 @@ def render_content(unit, scene, size, fonts):
             pad = vpad
             print(f"    [textplace] {unit['label']}: vision-placed card (size {draw_size})")
 
-    if box is None:
-        # Fallback: the art reserves an empty side for the text — put the text
-        # there, else the measured-calmest fitting zone.
-        region = (scene or {}).get("text_region")
-        cands = [z for z in CONTENT_ZONES if _fits(unit["text"], z, size, fonts)] or ["bottom"]
-        busy = _busy_map(canvas)
-        energy = {z: _region_energy(busy, _snug_card(unit["text"], z, size, fonts)) for z in cands}
-        calmest = min(cands, key=energy.get)
-        # Prefer the side the art was told to leave empty — but only if it really
-        # is calm; if Flux ignored it and put characters there, fall to calmest.
-        if region in cands and energy[region] <= energy[calmest] * 1.3:
-            zone = region
-        else:
-            zone = calmest
-        box = _snug_card(unit["text"], zone, size, fonts)
-    _draw_scrim(canvas, box)               # soft feathered glow, no hard border
-    d = ImageDraw.Draw(canvas)
+    # Seat the text on the CALMEST available spot so it never overrides a
+    # subject. Candidates: the vision box (if any) and every fitting third-zone.
+    # The vision pick and the art's reserved side each get a small bias so a good
+    # placement isn't discarded over a trivially-calmer alternative.
+    busy = _busy_map(canvas)
+    region = (scene or {}).get("text_region")
+    zcands = [z for z in CONTENT_ZONES if _fits(unit["text"], z, size, fonts)] or ["bottom"]
+
+    options = []  # (label, box, draw_size, pad, score)
+    if box is not None:
+        options.append(("vision", box, draw_size, pad,
+                        _region_energy(busy, box) * 0.85))  # trust a good vision pick
+    for z in zcands:
+        zb = _snug_card(unit["text"], z, size, fonts)
+        bias = 0.9 if z == region else 1.0     # gently prefer the art's reserved side
+        options.append((z, zb, size, CARD_PAD, _region_energy(busy, zb) * bias))
+
+    label_, box, draw_size, pad, _score = min(options, key=lambda o: o[4])
+    if label_ != "vision":
+        print(f"    [textplace] {unit['label']}: seated text on calmest zone '{label_}'")
+
+    # Reference-book finish: text sits directly on the art, colour chosen to
+    # contrast the local picture, with a soft feathered halo. If the only spot
+    # available is busy art, a soft feathered scrim guarantees legibility without
+    # a boxed slab (see the three client interiors' soft light behind text).
     inner = [box[0] + pad, box[1] + pad, box[2] - pad, box[3] - pad]
-    _draw_text_fixed(d, unit["text"], inner, fonts, draw_size, align="center", fill=INK)
+    protect = _region_energy(busy, box) > _CALM_MAX
+    _draw_text_on_art(canvas, unit["text"], inner, fonts, draw_size,
+                      align="center", protect=protect)
     _page_number(canvas, unit["label"])
     return canvas.convert("RGB")
 
