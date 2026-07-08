@@ -134,6 +134,44 @@ def describe_reference(image_bytes: bytes, name: str) -> str:
         return ""
 
 
+def locked_spec_from_ref(image_bytes: bytes, name: str) -> dict:
+    """Derive a charspec `locked_spec` from an existing character reference sheet.
+
+    Lets an already-generated book gain cross-page consistency: read the exact
+    colours/garments already drawn and lock them, so re-illustrated pages match
+    the established design instead of drifting.
+    """
+    sysd = (
+        "You build an EXACT character specification from a reference sheet so the "
+        "character can be redrawn identically every time. Sample real #RRGGBB hex "
+        "colours from the image; name garments precisely; give any logo/print its "
+        "motif, position and approximate coords/size. NEVER use approximate words.")
+    userd = (
+        f"Look at this reference sheet of {name} and fill this schema with exact "
+        "values from the image. Return ONLY {\"locked_spec\": {...}} with shape: "
+        '{"identity":{"species":"","age_years":0,"gender_presentation":"",'
+        '"skin":{"hex":"#RRGGBB","undertone":"","notes":""},'
+        '"build":{"height_cm":0,"body_type":""}},'
+        '"hair":{"color_hex":"#RRGGBB","length":"","style":"","texture":"",'
+        '"accessory":{"item":"","color_hex":"#RRGGBB"}},'
+        '"face":{"eye_color_hex":"#RRGGBB","eye_shape":"","eyebrows":"","nose":"",'
+        '"wrinkles":"","distinguishing":[]},'
+        '"outfit":{"top":{"garment":"","color_hex":"#RRGGBB","fit":"",'
+        '"logo":{"present":false,"motif":"","position":"","coords_pct":[0,0],'
+        '"size_pct":0,"color_hex":"#RRGGBB"}},'
+        '"bottom":{"garment":"","color_hex":"#RRGGBB","fit":""},'
+        '"footwear":{"garment":"","color_hex":"#RRGGBB","sole_hex":"#RRGGBB",'
+        '"fastening":"","logo":"none"},"outerwear":"none"},'
+        '"accessories":[]}. For an animal, hair=coat colour/markings, '
+        "outfit=collar/bandana or none.")
+    try:
+        return chat_json_image(sysd, userd, image_bytes, mime="image/png").get(
+            "locked_spec", {})
+    except Exception as e:  # noqa: BLE001
+        print(f"   [locked_spec_from_ref] {name}: {str(e)[:80]}")
+        return {}
+
+
 def _exact_likeness(prompt: str, name: str, caption: str = "") -> str:
     """Hard likeness wrapper with the vision caption injected."""
     detail = (f" {name} looks EXACTLY like this — reproduce every detail: {caption}."

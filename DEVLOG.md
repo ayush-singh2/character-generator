@@ -8,6 +8,18 @@ and the files touched.
 
 ---
 
+## v1.0 — Apply locked spec to an existing book; regen pages 8–9 (2026-07-08)
+**Change:** to give an already-generated book cross-page consistency,
+`refs.locked_spec_from_ref` vision-reads a character's existing reference sheet
+and derives an exact `locked_spec` (real hex, garments, logo) — so re-illustrated
+pages match the established design instead of drifting. `regen_pages` now appends
+each present character's lock to the page prompt (deterministic), same as the
+main loop. Demo: regenerated Ella pages 8–9; page 9's Ella now matches her ref
+(purple paw-logo tee, headband, ponytail, denim shorts). Old art backed up to
+`page_NN.png.bak`.
+**Files:** `pipeline/refs.py` (`locked_spec_from_ref`),
+`pipeline/regen_pages.py` (lock injection).
+
 ## v0.9 — Locked character spec for cross-page consistency (2026-07-08)
 **Problem:** a character (e.g. Ella) drifted between pages — t-shirt logo, shoe
 colour, hair shade and face wrinkles changed — because vague descriptions
