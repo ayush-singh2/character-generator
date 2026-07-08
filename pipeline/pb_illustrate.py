@@ -20,6 +20,7 @@ Out:  output/storybook/art/page_*.png, cover_art.png  +  data/scenes_pb.json
 import json
 import os
 
+from . import charspec
 from . import flux
 from . import motifs
 from .llm import chat_json
@@ -117,6 +118,17 @@ def _compact_bible(bible):
     return "\n".join(rows)
 
 
+def _locks_for(present, bible):
+    """Serialise the locked spec of each present character into one exact block."""
+    by_name = {c["name"]: c for c in bible}
+    blocks = []
+    for name in present:
+        c = by_name.get(name)
+        if c and charspec.has_spec(c):
+            blocks.append(charspec.serialize(c["locked_spec"], name))
+    return "\n".join(blocks)
+
+
 def _gather_refs(present, refs):
     present = [n for n in present if n in refs]
     imgs = []
@@ -211,7 +223,12 @@ def illustrate(force=False, recompose=False):
                 spec = plan_scene(unit, empty_side, bible, style_prompt)
                 present = spec.get("characters_present", [])
                 print(f"   present: {present or '(none)'} | {spec.get('moment','')[:60]}")
-                img = _render(spec["scene_prompt"], _gather_refs(present, refs))
+                # Pin every present character to its EXACT locked spec, appended
+                # deterministically (not left to the planner to paraphrase) so
+                # colours/logo/features never drift between pages.
+                lock = _locks_for(present, bible)
+                prompt = spec["scene_prompt"] + (("\n\n" + lock) if lock else "")
+                img = _render(prompt, _gather_refs(present, refs))
                 flux.save(img, path)
                 spec["image"] = path
                 scenes[label] = spec

@@ -89,6 +89,15 @@ character's era, culture, and role, and mark those as "inferred".
 The output drives an AI image generator, so be concrete and unambiguous
 (exact colors, specific garments).
 
+EXACTNESS RULE (this is what keeps a character identical across every page):
+NEVER give an approximate or open-ended value. Banned: "favourite colour",
+"mid-size", "some kind of hat", "blue-ish", "casual clothes", "a logo". ALWAYS
+commit to ONE exact value — a specific #RRGGBB hex for every colour, a named
+garment, a named logo motif with its position and approximate size. If the text
+is silent, INVENT a specific value and LOCK it. Consistency beats accuracy: the
+same fixed shade on every page reads as one character; a slightly different
+shade each page does not. Fill the `locked_spec` object below completely.
+
 CRITICAL — commit to ONE concrete individual per entry:
   * Even for a "representative" subject (e.g. "Shelter dog", "Kid volunteer"),
     design ONE specific individual with a SINGLE fixed appearance. Pick one
@@ -124,10 +133,31 @@ Return STRICT JSON only:
       "color_palette": ["<3-5 signature hex or named colors>"],
       "art_style_notes": "<anime sub-style cues that suit this character>",
       "inferred": ["<which fields were invented vs. text-stated>"],
-      "flux_reference_prompt": "<a single dense prompt, ready to paste into Flux, that would generate a clean full-body character reference sheet of this character: anime style, neutral pose, plain background, front view>"
+      "flux_reference_prompt": "<a single dense prompt, ready to paste into Flux, that would generate a clean full-body character reference sheet of this character: anime style, neutral pose, plain background, front view>",
+      "locked_spec": {
+        "identity": {
+          "species": "human | <animal>",
+          "age_years": <integer>,
+          "gender_presentation": "<girl|boy|woman|man|n/a>",
+          "skin": {"hex": "#RRGGBB", "undertone": "warm|cool|neutral", "notes": "<smooth/wrinkles/freckles etc.>"},
+          "build": {"height_cm": <integer>, "body_type": "<slender|average|stocky>"}
+        },
+        "hair": {"color_hex": "#RRGGBB", "length": "<exact>", "style": "<exact>", "texture": "<exact>", "accessory": {"item": "<or none>", "color_hex": "#RRGGBB"}},
+        "face": {"eye_color_hex": "#RRGGBB", "eye_shape": "<exact>", "eyebrows": "<exact>", "nose": "<exact>", "wrinkles": "<none|exact>", "distinguishing": ["<exact marks>"]},
+        "outfit": {
+          "top": {"garment": "<exact>", "color_hex": "#RRGGBB", "fit": "<exact>", "logo": {"present": true|false, "motif": "<exact>", "position": "<exact>", "coords_pct": [<x>, <y>], "size_pct": <int>, "color_hex": "#RRGGBB"}},
+          "bottom": {"garment": "<exact>", "color_hex": "#RRGGBB", "fit": "<exact>"},
+          "footwear": {"garment": "<exact>", "color_hex": "#RRGGBB", "sole_hex": "#RRGGBB", "fastening": "<laces|velcro|slip-on>", "logo": "<none|exact>"},
+          "outerwear": "<none | {garment,color_hex,...}>"
+        },
+        "accessories": [{"item": "<exact>", "color_hex": "#RRGGBB", "when": "<always|only when ...>"}]
+      }
     }
   ]
-}"""
+}
+
+For an ANIMAL, reuse locked_spec with `hair` = coat colour/markings, `outfit`
+= collar/bandana (or "none"), `face` = muzzle/ears; omit human-only garments."""
 
 
 def _manuscript_text(doc: dict, story_no: int | None = None) -> str:

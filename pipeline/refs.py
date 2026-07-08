@@ -19,7 +19,7 @@ from io import BytesIO
 
 from PIL import Image
 
-from . import flux
+from . import charspec, flux
 from .llm import chat_json_image
 from .style import load_style_prompt
 
@@ -203,7 +203,13 @@ def _identity(c: dict) -> str:
     Both the close-up and the full-body prompt are built on top of this exact
     block, so the two references carry *identical* detailing (same hair, eyes,
     face, outfit, palette) and only differ in framing.
+
+    When the bible carries a `locked_spec` (exact hex/coords/garments), that
+    deterministic block is authoritative — it is what keeps the character from
+    drifting between pages.
     """
+    if charspec.has_spec(c):
+        return charspec.serialize(c["locked_spec"], c.get("name", ""))
     outfit = c.get("default_outfit", {})
     outfit_colors = ", ".join(outfit.get("colors", [])[:4])
     animal = _is_animal(c)
