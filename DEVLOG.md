@@ -8,6 +8,13 @@ and the files touched.
 
 ---
 
+## v1.2 — Per-run versioned art folders (2026-07-08)
+**Change:** `pipeline/versions.py` snapshots each art run into
+`output/storybook/art/versions/vN/page_NN/page_NN.png` (+ `cover/`, `manifest.json`),
+auto-incrementing vN. `--migrate` folds legacy flat `versionN/` folders in.
+Replaces scattered `.bak` files with clean, comparable per-run history.
+**Files:** `pipeline/versions.py` (new).
+
 ## v1.1 — Best prompt-based consistency method (2026-07-08)
 **Problem:** even with the locked spec, Ella's logo/shoe/shirt-colour drifted
 between pages. Tried post-compositing a fixed logo PNG (`logo_composite.py`) but
