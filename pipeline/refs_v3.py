@@ -85,16 +85,24 @@ def generate(only=None):
         open(f"{REFS}/homer.png", "wb").write(out)
         print("  homer.png")
 
-    # 4) Humans reuse their real photos directly (strongest likeness anchor).
-    for name, src in (("Mom", "../../../CLIENT_DOC/ref_img/mom.jpg"),
-                      ("Dad", "../../../CLIENT_DOC/ref_img/dad.jpg")):
+    # 4) Humans — stylise their real photo into a matching character sheet so
+    #    they read as book characters (likeness anchored to the real photo).
+    for name, src in (("Mom", "../../CLIENT_DOC/ref_img/mom.jpg"),
+                      ("Dad", "../../CLIENT_DOC/ref_img/dad.jpg")):
         if not want(name):
             continue
-        # store the path in a small manifest; keep the photo as-is
-        if os.path.exists(src):
-            import shutil
-            shutil.copy2(src, f"{REFS}/{name.lower()}.jpg")
-            print(f"  {name.lower()}.jpg (real photo)")
+        if not os.path.exists(src):
+            print(f"  ! {name}: photo not found at {src}"); continue
+        photo_h = open(src, "rb").read()
+        instr = (
+            f"Using the reference PHOTO of a real person, draw a clean character "
+            f"REFERENCE SHEET of {name} in this style: {style}. Keep their real "
+            "likeness (face, hair, build). Show a front portrait and a full-body "
+            f"view, plain white background, friendly. Only {name}. No text."
+        )
+        out = editor.edit(instr, [photo_h] + style_imgs)
+        open(f"{REFS}/{name.lower()}.png", "wb").write(out)
+        print(f"  {name.lower()}.png (stylised from photo)")
 
     # manifest so downstream stages know where each ref is.
     man = {"refs": []}
