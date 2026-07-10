@@ -4,3 +4,4 @@ pdfplumber
 pillow
 streamlit
 python-docx
+python-toon>=0.1.3
