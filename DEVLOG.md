@@ -8,6 +8,139 @@ and the files touched.
 
 ---
 
+## v2.1 — Per-character LoRA path + Colab-Pro training feasibility (2026-07-10)
+**Context:** compositing (v2.0) gives pixel-perfect consistency but sprites read
+slightly "pasted." Next bet is a **per-character Flux LoRA** so the model LEARNS
+each character and paints them naturally into any pose — consistent AND painterly.
+`pipeline/lora.py` implements prepare→train→generate on fal.ai
+(`flux-lora-fast-training` + `flux-lora`, cached in `data/loras.json` with a rare
+trigger word per character). Client asked whether **Google Colab Pro** could host
+the GPU for training to avoid the fal.ai training fee.
+**Answer (documented for client):** yes for *training*, no for *hosting*.
+- Colab Pro can train a Flux LoRA, but VRAM is unpredictable (T4 16 GB / L4 24 GB /
+  A100 40 GB — you don't get to pick); on a T4 you must use a mem-optimized
+  trainer (ostris ai-toolkit / kohya) with fp8 + gradient checkpointing (~1–2 h/char).
+- Colab is a **session, not a host**: ephemeral VM wiped on disconnect, ~24 h
+  ceiling — must export `.safetensors` to Drive/HF immediately, and it CANNOT
+  serve inference to our local CLI pipeline.
+- **Recommended split:** train on Colab (save the fee) → store weights on Drive/HF
+  → run inference on fal.ai `flux-lora` (accepts an arbitrary LoRA `path`, so
+  `generate()` barely changes).
+- LoRA quality depends on training-set pose/angle variety — audit
+  `output/assets/<char>/*.raw.png` + `output/refs/<char>/` before spending GPU time.
+**Next steps:** (1) audit per-character training sets, (2) Colab ai-toolkit
+training notebook, (3) refactor `lora.py` so `train()` can consume externally
+trained LoRA URLs (skip fal training, keep fal inference).
+**Files:** `pipeline/lora.py`, `docs/Colab-Pro-for-LoRA-Training.md` (+ rendered
+`.pdf`). See [[compositing-engine]], [[character-consistency-priority]].
+
+## v2.0 — Compositing engine: true pixel-to-pixel character consistency (2026-07-09)
+**Problem:** after v1.6 the client was still unhappy — Obi looked like a
+different dog/species on nearly every page, his green cap dropped, Mom/Dad
+didn't match their refs. Root reality finally named: **diffusion text-to-image
+(flux) redraws every character freehand from noise on each call**, so reference
++ prompt conditioning can only reduce variance, never reach pixel consistency.
+We were hitting that ceiling repeatedly. A controlled test (single Obi ref vs
+none) confirmed refs ARE honoured — the book failure was cross-character
+contamination + freehand redraw. Client asked to stop hit-and-trial and build a
+proper multi-layer engine with pixel-to-pixel consistency.
+**New architecture (approved: compositing, OpenRouter-only):** stop letting the
+model redraw characters; REUSE the same character pixels.
+- `pipeline/sprites.py` — **character atlas**: generate a small, human-vetted set
+  of pose sprites per character ONCE from the approved refs, cut to transparent
+  PNGs with rembg (u2net), store in `output/assets/<char>/<pose>.png`. 24 sprites
+  built for Bilbo/Obi/Homer/Mom/Dad. The client APPROVED the atlas before any
+  page was built (contact sheet gate).
+- `pipeline/compositor.py` — **layered assembly**: background plate + reused
+  sprites (locked size ratio, contact shadow) + a painterly blend pass (edge
+  feather + shared paper grain) so sprites sit in the scene.
+- `pipeline/compose_book.py` — **director + build**: per page, an LLM stages the
+  shot (which atlas pose each character strikes, position, size, facing) + a
+  CHARACTER-FREE background description; generate the plate; composite; save to
+  the standard `art/page_NN.png`. Then the EXISTING `picturebook.build()` adds
+  text + page numbers + PDF unchanged (client already liked the text placement).
+**Result:** characters are IDENTICAL on every page (same PNG) — Obi keeps his
+green O cap everywhere, Bilbo his red B cap, size ratio fixed, Homer always the
+dragon, Mom/Dad stable. Only backgrounds vary (desired). Book saved as v4
+(`output/versions/bilbo_v4/`). Known limits: composited chars read slightly
+crisper than the painted plate (blend mitigates); no fire-breathing Homer pose
+in the atlas yet; Page 11 stays a blank placeholder (empty manuscript text);
+poses limited to the atlas (extend as needed). Deps added: rembg[cpu],
+onnxruntime.
+**Files:** `pipeline/sprites.py`, `pipeline/compositor.py`,
+`pipeline/compose_book.py`. See [[duo-group-reference]] (superseded for
+characters), [[character-consistency-priority]].
+
+## v1.6 — Duo reference stops Obi/Bilbo collapsing (2026-07-09)
+**Problem (client review of v2):** Obi looked like a different dog/species on
+every page (coat rust→golden, green "O" cap dropped everywhere), both dogs'
+size varied, Mom/Dad drifted from their refs, and pages 7–8 had a hard seam
+between art and the text wash. Locked specs (v1.5) weren't enough — the refs
+"weren't being utilised".
+**Diagnosis (cheap controlled test, not guessing):** generated a single dog
+from ONLY Obi's portrait vs no ref. With-ref reproduced his amber coat, white
+blaze and cap; no-ref gave a generic golden puppy. So references ARE honoured —
+the book failure is **cross-character contamination**: when Bilbo's dominant
+"generic golden retriever" sheet is passed alongside Obi's, `flux.2-max`
+averages the two dogs and Obi loses his identity. On 5-char pages refs were
+also dropped (cap was 4).
+**Fixes:**
+- **Duo/group reference**: one combined image showing BOTH dogs together with
+  the correct contrast (`output/refs/duo_dogs.png`), configured in
+  `data/group_refs.json`. `_gather_refs` prepends any group image whose members
+  are all present and drops their individual sheets; other characters keep their
+  own portrait+full_body. This anchors the contrast so the model can't merge
+  them. See [[duo-group-reference]].
+- `MAX_REF_IMAGES` 4→8 (flux.2 takes ~10) so crowded pages keep everyone.
+- Portrait-first gathering; punchy per-character `_ref_binding` clause (cap ON
+  the head, coat colour, anti-generic) restating the lock briefly after it.
+- `_NO_SEAM` clause on every scene prompt to kill the art/text hard border.
+**Result (verified on pages 12/16/20 before full regen):** Obi's coat, size and
+species now consistent; Homer renders as a dragon again (was a brown bear).
+Residual: the green cap still drifts (red/absent ~half the pages) — a model
+limit the client accepted for now. Full regen → v3; v2 kept in
+`output/versions/bilbo_v2/`.
+**Files:** `pipeline/pb_illustrate.py`, `data/group_refs.json`,
+`output/refs/duo_dogs.png`.
+
+## v1.5 — Bilbo v2: dog identity lock + text-off-subject + regen (2026-07-09)
+**Problem (client review of Bilbo v1):** three defects. (1) Text on ONE page
+sat on top of Homer the dragon — his smooth green belly read as calm to the
+edge/vision placer, so a card landed on the subject. (2) Bilbo & Obi swapped
+SIZE and coat colour between pages (both were specced identically as
+"medium golden retriever"), so mid-book the smaller dog became the bigger one.
+(3) The logos on their caps kept changing page to page. Client loved page 21's
+look — subjects emerging from full art into soft white/cream negative space.
+**Root cause:** Bilbo/Obi/Homer had NO `locked_spec` (unlike Ella), so nothing
+deterministic was pinned — only reference images + loose "keep consistent"
+wording. And `textplace` eroded only *detailed* cells of a character body, so a
+large smooth subject stayed "placeable"; animals/mascots weren't even in
+`HARD_LABELS`.
+**Fixes:**
+- `data/characters.json`: added exact `locked_spec` for **Bilbo** (large, pale
+  cream coat, RED cap with white **B**, blue collar), **Obi** (clearly SMALLER,
+  darker reddish-amber coat + white chest blaze, GREEN cap with yellow **O**,
+  red collar) and **Homer** (green dragon, navy-pinstripe **#00** jersey, navy
+  cap between horns). The serialised block bakes the size/coat CONTRAST
+  ("the LARGER…", "the SMALLER…", "PALER"/"DARKER") into every ref and page.
+- `pipeline/textplace.py`: animals/pets/mascots/dragons/bodies added to
+  `HARD_LABELS`; each subject box's solid **core** (`CORE_INSET`) is now
+  hard-forbidden regardless of edge detail, so a smooth belly/costume can never
+  carry text (loose box margins stay reclaimable as plain wall). Vision SYSTEM
+  prompt now tells the model to box the WHOLE creature.
+- `pipeline/picturebook.py`: stronger preference (0.72) for the art's
+  guaranteed-empty reserved side when seating text.
+- Regenerated the 3 character reference sheets from the new specs, then
+  re-illustrated all 19 pages + cover and rebuilt the PDF. v1 archived to
+  `output/versions/bilbo_v1/`; v2 to `output/versions/bilbo_v2/`.
+**Result:** dragon page text now sits on the calm stadium wash clear of Homer;
+Bilbo stays the larger cream red-**B**-cap dog and Obi the smaller darker
+green-**O**-cap dog across pages; cap letters are stable. (Note: "Page 11" has
+empty manuscript text so it stays a blank placeholder page, same as v1 — a
+pagination artifact, not part of this change.)
+**Files:** `data/characters.json`, `pipeline/textplace.py`,
+`pipeline/picturebook.py`.
+
 ## v1.4 — Closed-loop negative space + white-blur text + watch audit (2026-07-08)
 **Problem:** after v1.3 the full-bleed text-on-art still (a) overlapped subjects
 on pages whose art filled the whole frame (no empty band existed), and (b) sat

@@ -514,7 +514,7 @@ def render_content(unit, scene, size, fonts):
                         _region_energy(busy, box) * 0.85))  # trust a good vision pick
     for z in zcands:
         zb = _snug_card(unit["text"], z, size, fonts)
-        bias = 0.9 if z == region else 1.0     # gently prefer the art's reserved side
+        bias = 0.72 if z == region else 1.0    # prefer the art's guaranteed-empty side
         options.append((z, zb, size, CARD_PAD, _region_energy(busy, zb) * bias))
 
     label_, box, draw_size, pad, _score = min(options, key=lambda o: o[4])

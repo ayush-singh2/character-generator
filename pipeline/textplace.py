@@ -43,7 +43,13 @@ CALM_SPAN = 0.58
 
 # Keep-clear labels that are HARD (a card must never touch); everything else in
 # keepclear (furniture, toys, props) is soft — allowed only as a last resort.
-HARD_LABELS = ("character", "person", "face", "hand", "head", "arm", "kid", "child")
+# Animals, pets, mascots and costumed creatures (e.g. Homer the dragon) are
+# SUBJECTS just like people — their smooth bellies/costumes read calm to edge
+# detection, so they must be hard, not soft, or text lands right on them.
+HARD_LABELS = ("character", "person", "face", "hand", "head", "arm", "kid",
+               "child", "animal", "creature", "dragon", "mascot", "dog", "cat",
+               "pet", "puppy", "monster", "body", "torso", "chest", "figure",
+               "costume")
 # Of those, these are ALWAYS fully forbidden (never eroded) — a card must not sit
 # on a face/hand even where it's smooth. Body labels get CV erosion instead.
 FACE_LABELS = ("face", "head", "hand", "eye", "mouth", "hair")
@@ -54,6 +60,12 @@ HARD_DILATE = 0.03
 # A body cell counts as "really the figure" (and is forbidden) only if its edge
 # detail reaches this; flatter cells inside a loose person-box are kept.
 DETAIL_MIN = 0.22
+# Fraction to shrink each side of a subject box to reach its solid core. That
+# core is hard-forbidden no matter how smoothly it is painted — a dog's flank or
+# a dragon's costumed belly is edge-calm but is still the subject and must never
+# carry text. The looser box margins stay reclaimable by the calm prior, so a
+# strip of plain wall beside a figure is still usable.
+CORE_INSET = 0.20
 
 # Vertical prior: weight is full down to VERT_FULL of the height, then ramps to
 # VBOTTOM at the bottom edge — a smooth floor (and the wall/floor boundary) is
@@ -82,16 +94,19 @@ floor or ground, plain backdrop. Prefer the biggest emptiest areas. A
 placeable region must be featureless — do NOT include a window, mirror,
 picture, or any object inside it; box only the bare wall around them.
 
-KEEPCLEAR regions — anything a card must NOT cover: any character or person,
-faces, hands; solid foreground objects (sofa, chair, table, bed, patterned
-rug, toys, books); AND wall FEATURES that read as clutter under text —
-windows, mirrors, framed pictures, shelves, clocks, TV/screens, wall lamps.
-Text should sit on BLANK wall beside these, never on top of them.
+KEEPCLEAR regions — anything a card must NOT cover: any character, person, or
+CREATURE — this includes animals, pets, dogs, cats, and costumed mascots or
+dragons; box the WHOLE creature (its body/belly/costume too, not just the
+face), even where its coat or costume looks smooth and calm. Also faces,
+hands; solid foreground objects (sofa, chair, table, bed, patterned rug, toys,
+books); AND wall FEATURES that read as clutter under text — windows, mirrors,
+framed pictures, shelves, clocks, TV/screens, wall lamps. Text should sit on
+BLANK wall/sky beside these, never on top of them.
 
 Return STRICT JSON only:
 {
   "placeable": [{"box":[x0,y0,x1,y1],"label":"wall|sky|floor|ground|background","score":0.0-1.0}],
-  "keepclear": [{"box":[x0,y0,x1,y1],"label":"character|face|furniture|toy|prop|window|picture|shelf|lamp"}]
+  "keepclear": [{"box":[x0,y0,x1,y1],"label":"character|animal|mascot|dragon|face|furniture|toy|prop|window|picture|shelf|lamp"}]
 }
 List placeable regions largest/emptiest first. Boxes may touch the edges.
 If the whole frame is busy with characters, return "placeable": []."""
@@ -211,6 +226,15 @@ def _weight_grid(img: Image.Image, spec: dict) -> list[list[float]] | None:
     for reg, label in zip(kc, labels):
         if any(h in label for h in HARD_LABELS) and not _is_face(label):
             _erode_zero(grid, edges, reg["box"])
+            # ...and hard-forbid the box's solid core regardless of edge detail:
+            # a dog's flank or a mascot/dragon's costumed belly reads calm to the
+            # eroder but IS the subject. Shrinking inward keeps the loose margins
+            # (plain wall beside the figure) reclaimable.
+            x0, y0, x1, y1 = reg["box"]
+            x0, x1 = sorted((x0, x1))
+            y0, y1 = sorted((y0, y1))
+            dx, dy = (x1 - x0) * CORE_INSET, (y1 - y0) * CORE_INSET
+            _fill(grid, [x0 + dx, y0 + dy, x1 - dx, y1 - dy], 0.0, "set")
 
     # 3) Faces/hands/heads: fully forbidden, with a safety dilation for wispy
     # hair the box clips. Applied LAST so nothing re-exposes them.

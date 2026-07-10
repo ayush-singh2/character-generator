@@ -41,11 +41,12 @@ NS_TRIES = int(os.getenv("PB_NS_TRIES", "3"))        # attempts per page
 STORYBOOK = "data/storybook.json"
 CHARACTERS = "data/characters.json"
 REFS = "data/refs.json"
+GROUP_REFS = "data/group_refs.json"
 SCENES = "data/scenes_split.json"
 ART_DIR = "output/storybook/art"
 COVER_PATH = "output/storybook/cover_art.png"
 
-MAX_REF_IMAGES = 4
+MAX_REF_IMAGES = 8   # flux.2 accepts up to ~10 reference images
 
 # Where the calm/empty area must be for each card zone.
 ZONE_HINT = {
@@ -140,45 +141,123 @@ def _locks_for(present, bible):
     return "\n".join(blocks)
 
 
-def _compose_prompt(scene_prompt, lock, present, refs):
+def _ref_tag(c):
+    """Short, punchy identity tag — coat/hair colour + the CAP ON the head.
+
+    The full locked_spec already carries this, but buried in a long block the
+    model ignores it. A brief, scannable restatement placed right after the lock
+    (repetition + brevity) is what actually forces the cap and coat to render.
+    """
+    name = c.get("name", "")
+    spec = c.get("locked_spec") or {}
+    bits = []
+    hair = spec.get("hair") or {}
+    if hair.get("style"):
+        bits.append(hair["style"])
+    elif c.get("hair"):
+        bits.append(str(c["hair"]))
+    top = (spec.get("outfit") or {}).get("top") or {}
+    g = str(top.get("garment", "")).lower()
+    if "cap" in g or "hat" in g:
+        logo = top.get("logo") or {}
+        cap = f"ALWAYS wearing the {top.get('color_hex', '')} {top['garment']}".strip()
+        if logo.get("motif"):
+            cap += f" with {logo['motif']}"
+        cap += " ON its head (the cap is present in EVERY scene)"
+        bits.append(cap)
+    return f"{name} — " + "; ".join(b for b in bits if b)
+
+
+def _ref_binding(present, bible):
+    """Forceful, book-agnostic instruction to actually honour the references."""
+    by = {c["name"]: c for c in bible}
+    tags = [t for t in (_ref_tag(by[n]) for n in present if n in by) if t.strip(" —")]
+    if not tags:
+        return ""
+    nonhuman = any((by[n].get("locked_spec") or {}).get("identity", {}).get("species",
+                   "human") not in ("human", "", None) for n in present if n in by)
+    guard = (" Do NOT simplify or default any animal to a plain generic breed — keep "
+             "each one's exact coat colour and markings." if nonhuman else "")
+    return ("Match every reference image faithfully: each character in the scene must "
+            "have the SAME coat/hair colour, the SAME markings, and the SAME hat/cap "
+            "ON its head as in its reference image." + guard
+            + " Characters: " + " | ".join(tags) + ".")
+
+
+# Flux sometimes paints a hard vertical edge where the calm text side begins.
+_NO_SEAM = ("Paint the whole frame edge-to-edge as ONE continuous scene — the calmer, "
+            "emptier area reserved for text is simply the same scene continuing "
+            "(open sky, distant field, soft wash), NOT a separate blank panel. No hard "
+            "border, no vertical seam, no dividing line, no framed box anywhere.")
+
+
+def _compose_prompt(scene_prompt, lock, present, refs, bible=None):
     """Build the final Flux prompt for maximum character consistency.
 
     Order matters: models weight the opening of a prompt most, so the exact
-    CHARACTER LOCK and a 'copy the reference image exactly' instruction lead,
-    and the scene description follows. The reference sheets themselves are
-    passed as conditioning images (the strongest consistency lever).
+    CHARACTER LOCK and a punchy reference-binding instruction lead, and the
+    scene description follows. The reference sheets themselves are passed as
+    conditioning images (the strongest consistency lever).
     """
     has_ref = [n for n in present if n in refs]
     parts = []
     if lock:
         parts.append(lock)
     if has_ref:
-        who = ", ".join(has_ref)
-        # Emphasise consistency WITHOUT "copy the reference image exactly"
-        # phrasing, which trips BFL's "Protected Content" moderation.
-        parts.append(
-            f"Keep {who}'s character design consistent throughout the book: the "
-            "same face, hairstyle and colour, the same outfit and colours, and the "
-            "same shirt print. Only their pose and action change to fit the scene.")
-    parts.append("SCENE: " + scene_prompt)
+        binding = _ref_binding(present, bible or [])
+        if binding:
+            parts.append(binding)
+        else:
+            who = ", ".join(has_ref)
+            parts.append(
+                f"Keep {who}'s character design consistent throughout the book: the "
+                "same face, coat/hair colour, the same outfit and colours, and the "
+                "same cap. Only their pose and action change to fit the scene.")
+    parts.append("SCENE: " + scene_prompt + "\n" + _NO_SEAM)
     return "\n\n".join(parts)
+
+
+def _load_group_refs():
+    """Optional combined ('duo'/'cast') reference images, from data/group_refs.json.
+
+    Two similar characters (Bilbo & Obi) get collapsed into one prototype when
+    their SEPARATE reference sheets are passed together — the dominant one (a
+    generic golden retriever) contaminates the other, so Obi loses his amber coat
+    and green cap. A single image that already shows BOTH dogs with the correct
+    CONTRAST anchors the difference so the model can't merge them. Each entry:
+    {"members": ["Bilbo","Obi"], "image": "output/refs/duo_dogs.png"}.
+    """
+    if not os.path.exists(GROUP_REFS):
+        return []
+    try:
+        return json.load(open(GROUP_REFS))
+    except Exception:
+        return []
 
 
 def _gather_refs(present, refs):
     present = [n for n in present if n in refs]
-    imgs = []
-    # Full-body FIRST: it shows the exact outfit, colours and shirt logo — the
-    # things that drift. On a crowded page (cap = MAX_REF_IMAGES) this guarantees
-    # each character's outfit reference is passed, not just their face.
-    for n in present:
-        if len(imgs) >= MAX_REF_IMAGES:
-            break
-        imgs.append(open(refs[n]["full_body"], "rb").read())
-    # Then portraits for face detail if slots remain.
-    for n in present:
+    imgs, covered = [], set()
+    # 1) Combined group reference(s) first (strongest position). When all members
+    #    of a group are on the page, its single duo/cast image replaces their
+    #    individual sheets so they can't contaminate each other.
+    for grp in _load_group_refs():
+        members = grp.get("members", [])
+        if members and all(m in present for m in members) and os.path.exists(grp.get("image", "")):
+            imgs.append(open(grp["image"], "rb").read())
+            covered.update(members)
+    # 2) Clean front-view PORTRAIT for every character NOT covered by a group
+    #    (Mom, Dad, Homer) — the strongest single-character identity anchor.
+    rest = [n for n in present if n not in covered]
+    for n in rest:
         if len(imgs) >= MAX_REF_IMAGES:
             break
         imgs.append(open(refs[n]["portrait"], "rb").read())
+    # 3) Their full-bodies for outfit/proportion, if slots remain.
+    for n in rest:
+        if len(imgs) >= MAX_REF_IMAGES:
+            break
+        imgs.append(open(refs[n]["full_body"], "rb").read())
     return imgs[:MAX_REF_IMAGES]
 
 
@@ -310,7 +389,7 @@ def illustrate(force=False, recompose=False, only=None):
                 # leaves the reserved text band clean.
                 if attempt > 1:
                     scene_prompt = _emptiness_boost(empty_side) + scene_prompt
-                prompt = _compose_prompt(scene_prompt, lock, present, refs)
+                prompt = _compose_prompt(scene_prompt, lock, present, refs, bible)
                 img = _render(prompt, _gather_refs(present, refs))
 
                 ok, empty_e, other_e = _reserved_side_calm(img, empty_side)
