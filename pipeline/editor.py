@@ -61,10 +61,14 @@ def edit(instruction: str, images: list[bytes], *, model: str | None = None) -> 
                 raise requests.exceptions.ConnectionError(last_err)
             if resp.status_code != 200:
                 raise RuntimeError(f"editor {resp.status_code}: {resp.text[:400]}")
-            msg = resp.json().get("choices", [{}])[0].get("message", {})
+            choices = resp.json().get("choices") or [{}]
+            msg = choices[0].get("message", {})
             imgs = msg.get("images") or []
             if not imgs:
-                raise RuntimeError(f"editor returned no image: {str(msg)[:300]}")
+                # The image model sometimes returns reasoning/text and no image;
+                # this is transient — back off and retry rather than failing.
+                last_err = RuntimeError(f"editor returned no image: {str(msg)[:200]}")
+                raise requests.exceptions.ConnectionError(last_err)
             url = imgs[0]["image_url"]["url"]
             return base64.b64decode(url.split(",", 1)[1])
         except RETRYABLE as e:

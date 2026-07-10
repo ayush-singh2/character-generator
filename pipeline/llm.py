@@ -63,7 +63,13 @@ def _post_chat(body: dict) -> str:
                 raise requests.exceptions.ConnectionError(last_err)
             if resp.status_code != 200:
                 raise RuntimeError(f"OpenRouter {resp.status_code}: {resp.text[:300]}")
-            return resp.json()["choices"][0]["message"]["content"]
+            j = resp.json()
+            choices = j.get("choices")
+            if not choices or not choices[0].get("message", {}).get("content"):
+                # Occasional empty/error body with a 200 — retry rather than KeyError.
+                last_err = RuntimeError(f"OpenRouter empty response: {str(j)[:200]}")
+                raise requests.exceptions.ConnectionError(last_err)
+            return choices[0]["message"]["content"]
         except RETRYABLE as e:
             last_err = e
             if attempt < MAX_RETRIES:

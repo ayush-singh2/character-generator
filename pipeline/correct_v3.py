@@ -103,7 +103,15 @@ def run(only=None, scene_pass=True):
         if not os.path.exists(backup):
             open(backup, "wb").write(page)
         print(f"[{pg}] present: {present}")
+        try:
+            _correct_one(pg, s, path, present, plocks, refman, scene_pass)
+        except Exception as e:
+            print(f"   ! {pg}: correction skipped ({str(e)[:100]})")
+    print("correction done.")
 
+
+def _correct_one(pg, s, path, present, plocks, refman, scene_pass):
+        page = open(path, "rb").read()
         # 1-2) match characters, regenerate from reference if wrong
         for attempt in range(1, TRIES + 1):
             verdict = judge(page, plocks)
@@ -126,7 +134,6 @@ def run(only=None, scene_pass=True):
                 print("   -> scene perfected")
             else:
                 print("   -> scene pass skipped (would break a character)")
-    print("correction done.")
 
 
 if __name__ == "__main__":
