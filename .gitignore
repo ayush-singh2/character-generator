@@ -9,9 +9,9 @@ __pycache__/
 .venv/
 venv/
 
-# generated / heavy artifacts
+# generated / heavy artifacts — each generated book lives in books/<slug>/
 output/
-runs/
+books/
 data/*.json
 !data/.gitkeep
 

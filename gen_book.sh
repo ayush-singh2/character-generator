@@ -5,8 +5,8 @@
 # Usage:
 #   ./gen_book.sh "manuscript/Book A.docx" "manuscript/Book B.docx" ...
 #
-# Each book lands in   runs/<slug>/output/storybook/<Title>.pdf
-# and logs to          runs/<slug>/run.log
+# Each book lands in   books/<slug>/output/storybook/<Title>.pdf
+# and logs to          books/<slug>/run.log
 #
 # Env you can set:  PB_BODY_SIZE (default 30), TEXTPLACE_VISION (default 1).
 
@@ -17,7 +17,7 @@ gen_one() {
   local docx="$1"
   local base; base="$(basename "$docx" .docx)"
   local slug; slug="$(echo "$base" | tr ' A-Z' '_a-z' | tr -cd 'a-z0-9_-')"
-  local d="$ROOT/runs/$slug"
+  local d="$ROOT/books/$slug"
 
   mkdir -p "$d/data" "$d/output"
   for x in pipeline manuscript Illustration_guide Referance_book .env; do
@@ -39,4 +39,4 @@ fi
 
 for m in "$@"; do gen_one "$m" & done
 wait
-echo "All done. PDFs are under runs/*/output/storybook/"
+echo "All done. PDFs are under books/*/output/storybook/"
