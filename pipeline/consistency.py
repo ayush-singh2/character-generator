@@ -103,6 +103,85 @@ def judge_page(page_bytes: bytes, present: list[str], refs: dict) -> list[dict]:
     return verdict if isinstance(verdict, list) else []
 
 
+GROUP_REFS = "data/group_refs.json"
+
+GROUP_JUDGE_SYSTEM = """\
+You are checking whether two SIMILAR-LOOKING characters have been confused. The \
+LEFT panel is a rendered storybook PAGE. The RIGHT panel is the APPROVED \
+REFERENCE showing the named characters TOGETHER, correct and clearly distinct \
+from each other.
+
+Look at the page and decide, for these look-alike characters:
+- are BOTH present?
+- is each one's identity correct (matches the reference)?
+- most important: are the two clearly DISTINCT from each other, or have they \
+collapsed into the same-looking character / been swapped?
+
+Reply with ONLY a JSON object:
+{"distinct": true|false, "both_correct": true|false, \
+"wrong": ["<names that are wrong, swapped, or a duplicate>"], \
+"issue": "<short reason if anything is off, else empty>"}"""
+
+
+def _load_groups() -> list[dict]:
+    """Look-alike groups whose combined reference image exists on disk."""
+    if not os.path.exists(GROUP_REFS):
+        return []
+    groups = json.load(open(GROUP_REFS))
+    return [g for g in groups
+            if g.get("members") and os.path.exists(g.get("image", ""))]
+
+
+def discriminate_page(page_bytes: bytes, present: list[str],
+                      groups: list[dict]) -> list[dict]:
+    """For each look-alike group fully present, judge that its members are distinct.
+
+    Catches the failure the per-character judge cannot: two similar characters
+    (e.g. Bilbo & Obi) that each resemble their own portrait but have collapsed
+    into one another. Returns [{members, image, verdict}] for present groups.
+    """
+    out = []
+    for g in groups:
+        members = g["members"]
+        if not all(m in present for m in members):
+            continue
+        strip = _comparison_strip(page_bytes, [open(g["image"], "rb").read()])
+        user = (f"The look-alike characters are: {', '.join(members)}. "
+                "The REFERENCE panel shows them together, correct and distinct.")
+        verdict = chat_json_image(GROUP_JUDGE_SYSTEM, user, strip)
+        if isinstance(verdict, dict):
+            out.append({"members": members, "image": g["image"], "verdict": verdict})
+    return out
+
+
+def _group_fix_prompt(members: list[str], bible: dict) -> str:
+    locks = "; ".join(
+        f"{m}: {json.dumps(bible.get(m, {}), ensure_ascii=False)}" for m in members)
+    names = " and ".join(members)
+    return (
+        "The FIRST image is a storybook page that contains two SIMILAR-LOOKING "
+        f"characters ({names}). The next image is the APPROVED REFERENCE showing "
+        "them together, correct and clearly DISTINCT from each other.\n"
+        f"Repaint the page so that {', '.join(members)} each exactly match their "
+        "own identity in the reference AND are unmistakably different from each "
+        "other — do NOT let them look like the same animal or swap features. "
+        f"Correct looks — {locks}.\n"
+        "Keep EVERYTHING else identical: background, composition, lighting, the "
+        "other characters, and any empty area reserved for text. Do not move, "
+        "resize, add or remove anything else. Output the complete page, same "
+        "framing. No text or letters in the image."
+    )
+
+
+def correct_group(page_bytes: bytes, group: dict, bible: dict) -> bytes:
+    """Repaint a collapsed/swapped look-alike pair using their DUO reference."""
+    members = group["members"]
+    duo = open(group["image"], "rb").read()
+    prompt = _group_fix_prompt(members, bible)
+    print(f"      fixing look-alikes {members} via duo ref ...")
+    return flux.edit(prompt, [page_bytes, duo])
+
+
 def _fix_prompt(name: str, spec: dict | None) -> str:
     lock = ""
     if spec:
@@ -146,6 +225,7 @@ def _bible_by_name() -> dict:
 def run(pages: int | None = None, only: str | None = None, dry_run: bool = False):
     scenes, refs = _load()
     bible = _bible_by_name()
+    groups = _load_groups()
     # Pages in stable order by their recorded label.
     labels = sorted(scenes.keys())
     if only:
@@ -166,24 +246,49 @@ def run(pages: int | None = None, only: str | None = None, dry_run: bool = False
         print(f"[{label}] present: {present}")
 
         for attempt in range(1, MAX_FIX_TRIES + 1):
+            # (a) per-character identity check
             verdict = judge_page(page_bytes, present, refs)
-            drifted = [v["name"] for v in verdict if not v.get("consistent", True)]
             for v in verdict:
                 mark = "ok" if v.get("consistent", True) else f"DRIFT — {v.get('issue','')}"
                 print(f"   {v.get('name','?'):<10} {mark}")
-            if not drifted:
+            indiv_drift = [v["name"] for v in verdict if not v.get("consistent", True)]
+
+            # (b) look-alike discrimination check (Bilbo vs Obi collapse/swap)
+            disc = discriminate_page(page_bytes, present, groups)
+            bad_groups = []
+            grouped_members = set()
+            for d in disc:
+                ver = d["verdict"]
+                ok = ver.get("distinct", True) and ver.get("both_correct", True)
+                tag = "distinct" if ok else f"COLLAPSED/SWAPPED — {ver.get('issue','')}"
+                print(f"   {'&'.join(d['members']):<10} {tag}")
+                if not ok:
+                    bad_groups.append(d)
+                    grouped_members.update(d["members"])
+
+            # A character already handled by a group fix shouldn't also be
+            # fixed individually (the duo fix repaints both together).
+            indiv_drift = [n for n in indiv_drift if n not in grouped_members]
+
+            if not indiv_drift and not bad_groups:
                 print("   -> consistent" + (" (already)" if attempt == 1 else " after fix"))
                 break
             if dry_run:
-                print(f"   -> would fix: {drifted} (dry-run)")
+                todo = [f"duo:{'&'.join(d['members'])}" for d in bad_groups] + indiv_drift
+                print(f"   -> would fix: {todo} (dry-run)")
                 break
-            page_bytes = correct_page(page_bytes, drifted, refs, bible)
+
+            # Fix look-alike collapse first (duo ref), then any lone drift.
+            for d in bad_groups:
+                page_bytes = correct_group(page_bytes, d, bible)
+            if indiv_drift:
+                page_bytes = correct_page(page_bytes, indiv_drift, refs, bible)
+
+            _save_corrected(path, page_bytes)
+            still = [f"duo:{'&'.join(d['members'])}" for d in bad_groups] + indiv_drift
             if attempt == MAX_FIX_TRIES:
-                # Persist best effort even if a stubborn character remains.
-                _save_corrected(path, page_bytes)
-                print(f"   -> saved after {attempt} attempt(s) (still flagged: {drifted})")
+                print(f"   -> saved after {attempt} attempt(s) (was: {still})")
             else:
-                _save_corrected(path, page_bytes)
                 print(f"   -> corrected + saved, re-judging ...")
 
 
