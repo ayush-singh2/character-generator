@@ -6,10 +6,10 @@ from its approved look. This module closes the loop AFTER rendering:
   1. judge   — a vision model compares every character on the page against its
                approved reference (page + refs stacked into one comparison strip)
                and reports who drifted and how.
-  2. correct — each drifted character is repainted IN PLACE via flux.edit: the
-               page plus that character's reference go in, and the model is told
-               to fix ONLY that character while leaving the background, the other
-               characters, the composition and the reserved text space identical.
+  2. correct — each drifted character is fixed IN PLACE via an instruction-based
+               image editor (see editor.py). The judge's own issue text becomes
+               the edit instruction ("fix Obi: missing green O cap") and the
+               editor changes only that character, preserving everything else.
   3. re-judge — repeat until the page passes or MAX_FIX_TRIES is hit.
 
 This is the incremental, "only touch what's broken" approach. Approach 2
@@ -28,7 +28,7 @@ import os
 
 from PIL import Image
 
-from . import flux
+from . import editor
 from .llm import chat_json_image
 
 SCENES = "data/scenes_split.json"
@@ -173,45 +173,68 @@ def _group_fix_prompt(members: list[str], bible: dict) -> str:
     )
 
 
-def correct_group(page_bytes: bytes, group: dict, bible: dict) -> bytes:
-    """Repaint a collapsed/swapped look-alike pair using their DUO reference."""
-    members = group["members"]
-    duo = open(group["image"], "rb").read()
-    prompt = _group_fix_prompt(members, bible)
-    print(f"      fixing look-alikes {members} via duo ref ...")
-    return flux.edit(prompt, [page_bytes, duo])
-
-
-def _fix_prompt(name: str, spec: dict | None) -> str:
-    lock = ""
-    if spec:
-        lock = " Their correct look: " + json.dumps(spec, ensure_ascii=False)
+def _group_edit_instruction(members: list[str], bible: dict) -> str:
+    locks = "; ".join(
+        f"{m}: {json.dumps(bible.get(m, {}), ensure_ascii=False)}" for m in members)
+    names = " and ".join(members)
     return (
-        "The FIRST image is a finished storybook illustration. The image(s) after "
-        f"it are the APPROVED REFERENCE for the character '{name}'.{lock}\n"
-        f"Repaint the illustration so that {name} EXACTLY matches the reference — "
-        "same face, hair, skin tone, clothing and colours. Keep EVERYTHING else "
-        "pixel-for-pixel identical: background, composition, lighting, the other "
-        "characters, and any empty/quiet area reserved for text. Do not move, "
-        "resize, add or remove anything else. Output the complete page, same "
-        "framing. No text or letters in the image."
+        "Edit this storybook illustration to fix the two SIMILAR-LOOKING "
+        f"characters {names}. The attached reference shows them together, correct "
+        "and clearly DISTINCT from each other. Repaint each so it matches its own "
+        "identity in the reference AND the two are unmistakably different from each "
+        f"other — do not let them look like the same animal. Correct looks — {locks}. "
+        "Keep their poses, sizes and positions, and change NOTHING else in the "
+        "image (other characters, background, composition, lighting, text areas). "
+        "Do not add or remove any character. No text or letters."
     )
 
 
-def correct_page(page_bytes: bytes, drifted: list[str], refs: dict,
+def correct_group(page_bytes: bytes, group: dict, bible: dict) -> bytes:
+    """Fix a collapsed/swapped look-alike pair in place, using their DUO reference."""
+    members = group["members"]
+    duo = open(group["image"], "rb").read()
+    instr = _group_edit_instruction(members, bible)
+    print(f"      editing look-alikes {members} (make distinct) ...")
+    return editor.edit(instr, [page_bytes, duo])
+
+
+def _edit_instruction(name: str, issue: str, spec: dict | None) -> str:
+    lock = (" Reference look: " + json.dumps(spec, ensure_ascii=False)) if spec else ""
+    issue_line = f" Problem to fix: {issue}." if issue else ""
+    return (
+        f"Edit this storybook illustration to fix ONLY the character '{name}'."
+        f"{issue_line} Make {name} exactly match the attached reference image(s) — "
+        "same face, fur/hair, skin, colours, outfit and any required accessories."
+        f"{lock} Keep {name}'s breed, size, pose and position the same. Change "
+        "NOTHING else in the image: not the other characters, the background, the "
+        "composition, the lighting, or any empty area kept for text. Do not add or "
+        "remove any character. No text or letters in the image."
+    )
+
+
+def _char_refs(refs: dict, name: str) -> list[bytes]:
+    out = []
+    p = _portrait_bytes(refs, name)
+    if p:
+        out.append(p)
+    fb = refs.get(name, {}).get("full_body")
+    if fb and os.path.exists(fb):
+        out.append(open(fb, "rb").read())
+    return out
+
+
+def correct_page(page_bytes: bytes, drifted: list[tuple[str, str]], refs: dict,
                  bible: dict) -> bytes:
-    """Repaint each drifted character in place, one flux.edit per character."""
+    """Fix each drifted character in place; `drifted` is [(name, issue), ...]."""
     out = page_bytes
-    for name in drifted:
-        ref = _portrait_bytes(refs, name)
-        if not ref:
+    for name, issue in drifted:
+        ref_imgs = _char_refs(refs, name)
+        if not ref_imgs:
             print(f"      ! {name}: no reference to fix against — skipped")
             continue
-        fb = refs.get(name, {}).get("full_body")
-        ref_imgs = [ref] + ([open(fb, "rb").read()] if fb and os.path.exists(fb) else [])
-        prompt = _fix_prompt(name, bible.get(name))
-        print(f"      fixing {name} ...")
-        out = flux.edit(prompt, [out] + ref_imgs)
+        instr = _edit_instruction(name, issue, bible.get(name))
+        print(f"      editing {name} (fix: {issue[:60]}) ...")
+        out = editor.edit(instr, [out] + ref_imgs)
     return out
 
 
@@ -251,7 +274,16 @@ def run(pages: int | None = None, only: str | None = None, dry_run: bool = False
             for v in verdict:
                 mark = "ok" if v.get("consistent", True) else f"DRIFT — {v.get('issue','')}"
                 print(f"   {v.get('name','?'):<10} {mark}")
-            indiv_drift = [v["name"] for v in verdict if not v.get("consistent", True)]
+            # A character the judge reports as "not visible" is NOT touched — the
+            # editor can only fix a character actually on the page; forcing an
+            # absent one in is what wrecked pages before. Keep (name, issue) so the
+            # judge's diagnosis becomes the edit instruction.
+            indiv_drift = [
+                (v["name"], v.get("issue", "") or "") for v in verdict
+                if not v.get("consistent", True)
+                and "not visible" not in (v.get("issue", "") or "").lower()
+                and "not present" not in (v.get("issue", "") or "").lower()
+            ]
 
             # (b) look-alike discrimination check (Bilbo vs Obi collapse/swap)
             disc = discriminate_page(page_bytes, present, groups)
@@ -268,13 +300,14 @@ def run(pages: int | None = None, only: str | None = None, dry_run: bool = False
 
             # A character already handled by a group fix shouldn't also be
             # fixed individually (the duo fix repaints both together).
-            indiv_drift = [n for n in indiv_drift if n not in grouped_members]
+            indiv_drift = [(n, i) for (n, i) in indiv_drift if n not in grouped_members]
 
             if not indiv_drift and not bad_groups:
                 print("   -> consistent" + (" (already)" if attempt == 1 else " after fix"))
                 break
             if dry_run:
-                todo = [f"duo:{'&'.join(d['members'])}" for d in bad_groups] + indiv_drift
+                todo = ([f"duo:{'&'.join(d['members'])}" for d in bad_groups]
+                        + [n for n, _ in indiv_drift])
                 print(f"   -> would fix: {todo} (dry-run)")
                 break
 
@@ -285,7 +318,8 @@ def run(pages: int | None = None, only: str | None = None, dry_run: bool = False
                 page_bytes = correct_page(page_bytes, indiv_drift, refs, bible)
 
             _save_corrected(path, page_bytes)
-            still = [f"duo:{'&'.join(d['members'])}" for d in bad_groups] + indiv_drift
+            still = ([f"duo:{'&'.join(d['members'])}" for d in bad_groups]
+                     + [n for n, _ in indiv_drift])
             if attempt == MAX_FIX_TRIES:
                 print(f"   -> saved after {attempt} attempt(s) (was: {still})")
             else:
