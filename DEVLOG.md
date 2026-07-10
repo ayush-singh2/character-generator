@@ -8,6 +8,60 @@ and the files touched.
 
 ---
 
+## v2.3 — Approach 1 built + correction backend found (2026-07-10)
+Built and validated Approach 1 (correct-after) end-to-end on a fresh render of
+pages 3–10 (isolated demo `books/bilbo-approach1-demo/`, reuses Bilbo data/refs,
+v4 deliverable untouched).
+- **`consistency.py`** — closed loop: vision **judge** (per-character vs its
+  reference) + **look-alike discrimination** (Bilbo vs Obi collapse, judged
+  against the duo ref) → **correct** → re-judge up to `CONSISTENCY_TRIES`. Backs
+  up each original to `page_NN.orig.png`.
+- **Detection works** (caught "Obi missing green O cap", "Mom wrong hair").
+- **Correction backend — three tries:**
+  1. `flux.edit` whole-page → *reimagined the frame* (a page became a full-frame
+     dragon). Rejected.
+  2. mask-based crop-inpaint (`inpaint.py`: locate→crop→regen→feather-paste) →
+     preserved background but the reference-generator **redrew** the character
+     (beagle→golden-retriever twin of Bilbo) and **doubled** it. Rejected.
+  3. **instruction-based image editor** (`editor.py`, OpenRouter
+     `google/gemini-3-pro-image`) → edits IN PLACE, preserves everything
+     unmentioned. **Winner.** The judge's issue text becomes the edit instruction.
+     Page 8: Obi's cap added, same beagle/pose, rest identical, re-judge "Obi ok".
+- **Guards:** never fix a "not visible" character (that caused the dragon).
+- **Files:** `pipeline/editor.py` (new), `pipeline/consistency.py`;
+  `inpaint.py` removed (superseded). On branch/`origin/dev`.
+- **Next:** run full book through Approach 1; then build **Approach 2**
+  (compose-from-parts) to A/B. See [[img2img-consistency-pivot]].
+
+## v2.2 — Pivot to img2img correction + repo restructure into books/ (2026-07-10)
+**Decision:** dropped BOTH prior consistency bets — LoRA fine-tune (v2.1) and the
+compositing engine (v2.0). New direction is **image-to-image correction**, two
+approaches to A/B test:
+- **Approach 1 (correct-after):** refs → scene with reserved text space → composed
+  page (scene+text) → *if* a character drifts, feed the page + that character's
+  existing reference(s) to an img2img model and tell it to replace only the
+  inconsistent character(s).
+- **Approach 2 (compose-from-parts):** generate character ref + per-page scene +
+  text, send all three to an img2img model with a detailed per-page scene prompt
+  and let it assemble the page.
+Both reuse the current `pb_run` chain (refs → pb_illustrate/picturebook → textplace);
+the differentiator is a new img2img/edit correction step on top of `flux`.
+
+**Repo cleanup (this commit):**
+- Removed abandoned code: `lora.py`, `sprites.py`, `compositor.py`, `compose_book.py`
+  (preserved in git checkpoint `cfbe16c` on branch `cleanup-restructure`).
+- **New layout: `books/<slug>/{data,output}`** — one folder per generated book, its
+  `output/` holds `versions/`, `storybook/`, `assets/`, `refs/`. Migrated:
+  bilbo-obi-baseball-adventure (was root data/+output/), ella-the-animal-shelter-and-you,
+  sparky (+ its partial illustration-notes run archived inside), i-m-not-different-i-m-unique.
+  `runs/` retired; `gen_book.sh` + `.gitignore` now target `books/`.
+- Junk removed: duplicate `venv/` (kept working `.venv/`), root `*.log`,
+  `pipeline/__pycache__`, empty `image.py`, `output/{_demo,_poc,lora_train,_atlas_sheet}`.
+- Kept per decision: legacy v1 flow (run/book/illustrate/…) and the Streamlit
+  `client_app.py` + its dep chain.
+**Next:** wire the img2img correction step and prototype both approaches on 3 pages
+of one book before any full regen. See [[compositing-engine]], [[character-consistency-priority]].
+
 ## v2.1 — Per-character LoRA path + Colab-Pro training feasibility (2026-07-10)
 **Context:** compositing (v2.0) gives pixel-perfect consistency but sprites read
 slightly "pasted." Next bet is a **per-character Flux LoRA** so the model LEARNS
