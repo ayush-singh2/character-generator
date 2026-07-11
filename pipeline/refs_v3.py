@@ -1,120 +1,87 @@
-"""v3 reference generation — fresh, correct, distinct character sheets.
+"""v3 reference generation — generic, driven by the art plan.
 
-Grounded in the manuscript, not v4/v5. The author's real photo
-(manuscript_media/notes-000.png) shows both dogs with the CORRECT hats
-(Bilbo green, Obi blue) + baseball bandanas; we stylise it into clean reference
-sheets in the client's V6 picture-book style. Look-alikes get a single DUO sheet
-so the green-vs-blue-hat contrast is locked in one image.
+Generates a clean character reference sheet for every HIGH-consistency character
+(from characters.toon), plus a combined GROUP sheet for each look-alike group so
+the distinguishing feature is anchored in one image. Incidental one-off characters
+are not given references (they are drawn from their text description per scene).
 
-Humans (Mom/Dad) use their real photos directly as references.
+If a character carries a `photo` path (real-person likeness), the sheet is
+stylised from that photo; otherwise it is designed from the written appearance.
 
-Run from the book dir:
-    PYTHONPATH=<repo> python -m pipeline.refs_v3
+Run from the book dir:  PYTHONPATH=<repo> python -m pipeline.refs_v3
 """
 
 import os
 
-from . import editor, toon_io
+from . import editor, plan_v3, toon_io
 
-DATA = "v3/data"
 REFS = "v3/refs"
-PHOTO = "manuscript_media/notes-000.png"          # real photo of both dogs
-STYLE_REF = "manuscript_media/v6-03.png"          # a V6 interior page for style
 
 
-def _style(chars):
-    return chars.get("style", "soft classic children's picture-book illustration")
+def _photo(c):
+    p = c.get("photo")
+    return open(p, "rb").read() if p and os.path.exists(p) else None
 
 
-def _by_name(chars):
-    return {c["name"]: c for c in chars["characters"]}
-
-
-def generate(only=None):
+def generate(only=None, data_dir="v3/data"):
     os.makedirs(REFS, exist_ok=True)
-    chars = toon_io.load(f"{DATA}/characters.toon")
-    style = _style(chars)
-    by = _by_name(chars)
-    photo = open(PHOTO, "rb").read()
-    style_ref = open(STYLE_REF, "rb").read() if os.path.exists(STYLE_REF) else None
-    style_imgs = [style_ref] if style_ref else []
+    plan = plan_v3.load(data_dir)
+    style = plan_v3.style_text(plan)
 
     def want(n):
-        return (only is None) or (n in only)
+        return only is None or n in only
 
-    # 1) DUO sheet — both golden retrievers together, distinguished by hat colour.
-    if want("duo"):
+    manifest = {"refs": [], "groups": []}
+
+    # 1) look-alike group sheets first (shared identity anchor)
+    for i, g in enumerate(plan["groups"]):
+        members = g.get("members", [])
+        if not members or not want(f"group{i}"):
+            continue
+        specs = "; ".join(plan_v3.char_lock(plan["by"][m])
+                          for m in members if m in plan["by"])
         instr = (
-            f"Using the reference PHOTO of two real golden retrievers, draw a clean "
-            f"character REFERENCE SHEET in this style: {style}. Show BOTH dogs, full "
-            "body, standing side by side on a plain white background, facing forward. "
-            "The dog on the LEFT is BILBO wearing a LIGHT GREEN baseball cap; the dog "
-            "on the RIGHT is OBI wearing a LIGHT BLUE baseball cap. Both wear a bandana "
-            "with a baseball print. They are the SAME breed (golden retriever) and must "
-            "be clearly told apart ONLY by hat colour (green=Bilbo, blue=Obi). No text."
+            f"Draw a clean character REFERENCE SHEET in this style: {style}. Show "
+            f"these look-alike characters together, full body, on a plain white "
+            f"background, clearly DISTINCT from each other: {specs}. They must be "
+            f"told apart by: {g.get('distinguish','their distinguishing features')}. "
+            "No text."
         )
-        out = editor.edit(instr, [photo] + style_imgs)
-        open(f"{REFS}/duo_dogs.png", "wb").write(out)
-        print("  duo_dogs.png")
+        try:
+            out = editor.edit(instr, [])
+        except Exception as e:
+            print(f"  ! group{i} failed: {str(e)[:80]}"); continue
+        path = f"{REFS}/group{i}.png"
+        open(path, "wb").write(out)
+        manifest["groups"].append({"members": members, "path": path,
+                                    "distinguish": g.get("distinguish", "")})
+        print(f"  group{i}: {members}")
 
-    # 2) Individual sheets for the two dogs, cut from the same look.
-    for name, hat in (("Bilbo", "LIGHT GREEN"), ("Obi", "LIGHT BLUE")):
+    # 2) individual sheets for every high-consistency character
+    for c in plan_v3.high_characters(plan):
+        name = c["name"]
         if not want(name):
             continue
+        photo = _photo(c)
+        base = ("Using the reference PHOTO, " if photo else "") + \
+               f"draw a clean character REFERENCE SHEET of {name} in this style: {style}."
         instr = (
-            f"Using the reference PHOTO, draw a clean single-character REFERENCE SHEET "
-            f"of {name} in this style: {style}. {name} is a golden retriever wearing a "
-            f"{hat} baseball cap and a bandana with a baseball print. Show a clear "
-            "front portrait AND a full-body view, plain white background, facing "
-            f"forward, friendly expression. Only {name}. No other dog. No text."
+            f"{base} {plan_v3.char_lock(c)}. Show a clear front PORTRAIT and a "
+            "FULL-BODY view, plain white background, friendly expression, facing "
+            f"forward. Only {name}; no other character. No text."
         )
-        out = editor.edit(instr, [photo] + style_imgs)
-        open(f"{REFS}/{name.lower()}.png", "wb").write(out)
-        print(f"  {name.lower()}.png")
+        try:
+            out = editor.edit(instr, [photo] if photo else [])
+        except Exception as e:
+            print(f"  ! {name} failed: {str(e)[:80]}"); continue
+        path = f"{REFS}/{plan_v3.slug(name)}.png"
+        open(path, "wb").write(out)
+        manifest["refs"].append({"name": name, "path": path})
+        print(f"  {name}")
 
-    # 3) Homer the dragon mascot (no photo — from description + style).
-    if want("Homer"):
-        h = by.get("Homer", {})
-        instr = (
-            f"Draw a clean character REFERENCE SHEET in this style: {style}. A friendly "
-            "team mascot: a person in a big GREEN dragon costume with giant green wings, "
-            "wearing a baseball cap and jersey, full body, plain white background, "
-            "smiling. No text."
-        )
-        out = editor.edit(instr, style_imgs or [])
-        open(f"{REFS}/homer.png", "wb").write(out)
-        print("  homer.png")
-
-    # 4) Humans — stylise their real photo into a matching character sheet so
-    #    they read as book characters (likeness anchored to the real photo).
-    for name, src in (("Mom", "../../CLIENT_DOC/ref_img/mom.jpg"),
-                      ("Dad", "../../CLIENT_DOC/ref_img/dad.jpg")):
-        if not want(name):
-            continue
-        if not os.path.exists(src):
-            print(f"  ! {name}: photo not found at {src}"); continue
-        photo_h = open(src, "rb").read()
-        instr = (
-            f"Using the reference PHOTO of a real person, draw a clean character "
-            f"REFERENCE SHEET of {name} in this style: {style}. Keep their real "
-            "likeness (face, hair, build). Show a front portrait and a full-body "
-            f"view, plain white background, friendly. Only {name}. No text."
-        )
-        out = editor.edit(instr, [photo_h] + style_imgs)
-        open(f"{REFS}/{name.lower()}.png", "wb").write(out)
-        print(f"  {name.lower()}.png (stylised from photo)")
-
-    # manifest so downstream stages know where each ref is.
-    man = {"refs": []}
-    for n in ("Bilbo", "Obi", "Homer", "Mom", "Dad"):
-        for ext in ("png", "jpg"):
-            p = f"{REFS}/{n.lower()}.{ext}"
-            if os.path.exists(p):
-                man["refs"].append({"name": n, "path": p})
-                break
-    man["duo"] = f"{REFS}/duo_dogs.png"
-    toon_io.save(man, f"{DATA}/refs.toon")
-    print("  -> v3/data/refs.toon")
+    toon_io.save(manifest, f"{data_dir}/refs.toon")
+    print(f"  -> {data_dir}/refs.toon "
+          f"({len(manifest['refs'])} refs, {len(manifest['groups'])} groups)")
 
 
 if __name__ == "__main__":

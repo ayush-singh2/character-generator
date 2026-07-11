@@ -1,59 +1,70 @@
-"""v3 img2img correction loop — the client's specified flow.
+"""v3 img2img correction loop — generic, the client's specified flow.
 
 Per page:
-  1. MATCH CHARACTERS — a vision judge checks each expected character against the
-     locked identity (esp. hat colour; the two dogs are the same golden retriever
-     told apart only by green=Bilbo / blue=Obi).
+  1. MATCH CHARACTERS — a vision judge checks each present character against its
+     locked identity from the plan (and any look-alike distinction).
   2. IF WRONG, REGENERATE FROM REFERENCE — the page + the character reference
-     sheet(s) (DUO sheet for the dog pair) go to the image editor, which fixes only
-     those characters and leaves the rest of the scene intact. Looped until they
-     pass (or V3_FIX_TRIES).
-  3. PERFECT THE SCENE — a final light pass polishes the scene to match the note,
-     guarded: if it breaks a character, the pre-polish page is kept.
+     sheet(s) (GROUP sheet when a look-alike group is fully present) go to the
+     image editor, which fixes only those characters. Looped up to V3_FIX_TRIES.
+  3. PERFECT THE SCENE — a guarded final polish; reverted if it breaks a character.
 
-Backs up the first render to page_<pg>.orig.png.
+Backs up the first render to page_<pg>.orig.png. Resilient: a page that errors is
+skipped, not fatal.
 """
 
+import io
 import os
 
-from . import editor, toon_io
-from .generate_v3 import _char_locks
+from PIL import Image
+
+from . import editor, plan_v3, toon_io
 from .llm import chat_json_image
+
+
+def _small(img_bytes, maxpx=896):
+    im = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    if max(im.size) > maxpx:
+        s = maxpx / max(im.size)
+        im = im.resize((int(im.width * s), int(im.height * s)))
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=88)
+    return buf.getvalue()
 
 DATA = "v3/data"
 ART = "v3/output/art"
 TRIES = int(os.getenv("V3_FIX_TRIES", "2"))
 
 JUDGE_SYSTEM = """\
-You check a children's picture-book page against the EXPECTED characters. For \
-each expected character, decide if it is present and matches — pay special \
-attention to HAT COLOUR and that the two dogs are the SAME golden retriever breed \
-distinguished ONLY by hat colour (Bilbo=green, Obi=blue), each with a baseball \
-bandana. Reply with ONLY a JSON array:
+You check a children's picture-book page against the EXPECTED characters. For each \
+expected character decide if it is present and matches its description (species, \
+hair, outfit, colours, signature items). If two look-alike characters are noted, \
+check they are kept distinct. Reply ONLY JSON:
 [{"name":"<name>","present":true|false,"correct":true|false,"issue":"<short>"}]"""
 
 
 def _refmap(refman):
-    return {r["name"]: r["path"] for r in refman["refs"]}
+    return {r["name"]: r["path"] for r in refman.get("refs", [])}
 
 
-def _present_locks(locks, present):
-    return "; ".join(l for l in locks.split("; ") if l.split(" =")[0] in present)
-
-
-def judge(page_bytes, present_locks):
-    v = chat_json_image(JUDGE_SYSTEM, f"EXPECTED characters: {present_locks}", page_bytes)
+def judge(page_bytes, locks, distinguish):
+    extra = f" Keep distinct: {distinguish}." if distinguish else ""
+    v = chat_json_image(JUDGE_SYSTEM, f"EXPECTED characters: {locks}.{extra}",
+                        _small(page_bytes), mime="image/jpeg")
     return v if isinstance(v, list) else []
 
 
-def fix_chars(page_bytes, wrong, refman, present_locks):
+def fix_chars(page_bytes, wrong, plan, present, refman, locks, distinguish):
     names = [w["name"] for w in wrong]
     rm = _refmap(refman)
-    imgs = []
-    if any(n in ("Bilbo", "Obi") for n in names) and os.path.exists(refman.get("duo", "")):
-        imgs.append(open(refman["duo"], "rb").read())
+    imgs, covered = [], set()
+    for g in refman.get("groups", []):
+        members = g.get("members", [])
+        if any(n in members for n in names) and all(m in present for m in members) \
+           and os.path.exists(g["path"]):
+            imgs.append(open(g["path"], "rb").read())
+            covered.update(members)
     for n in names:
-        if n in ("Bilbo", "Obi"):
+        if n in covered:
             continue
         p = rm.get(n)
         if p and os.path.exists(p):
@@ -61,79 +72,74 @@ def fix_chars(page_bytes, wrong, refman, present_locks):
     issues = "; ".join(f"{w['name']}: {w.get('issue','')}" for w in wrong)
     instr = (
         f"Edit this storybook page to FIX these characters: {issues}. Make each match "
-        f"the attached reference sheet(s) EXACTLY — {present_locks}. The two dogs are "
-        "the SAME golden retriever, told apart ONLY by hat colour (Bilbo=green, "
-        "Obi=blue), each wearing a baseball-print bandana. Keep the background, "
-        "composition and the other characters unchanged. No text, letters or boxes."
+        f"the attached reference sheet(s) EXACTLY — {locks}."
+        + (f" Keep look-alikes distinct: {distinguish}." if distinguish else "")
+        + " Keep the background, composition and the other characters unchanged. "
+        "No text, letters or boxes."
     )
-    return editor.edit(instr, [page_bytes] + imgs)
+    return editor.edit(instr, [page_bytes] + imgs[:6])
 
 
-def perfect_scene(page_bytes, scene):
+def perfect_scene(page_bytes, desc):
     instr = (
         f"Polish this children's picture-book illustration so it clearly depicts: "
-        f"{scene}. Fix any awkward anatomy or artifacts and improve clarity, but KEEP "
-        "each character's identity (breed, hat colour, bandana), their poses and the "
-        "overall composition the same. No text, letters, boxes or borders."
+        f"{desc}. Fix awkward anatomy or artifacts and improve clarity, but KEEP each "
+        "character's identity, poses and the overall composition the same. No text, "
+        "letters, boxes or borders."
     )
     return editor.edit(instr, [page_bytes])
 
 
 def _wrong(verdict):
-    # present-but-incorrect, or expected-but-missing -> both need the reference.
     return [v for v in verdict if not v.get("correct", True)]
 
 
-def run(only=None, scene_pass=True):
-    chars = toon_io.load(f"{DATA}/characters.toon")
-    _, locks = _char_locks(chars)
-    scenes = {s["page"]: s for s in toon_io.load(f"{DATA}/scenes.toon")["scenes"]}
-    refman = toon_io.load(f"{DATA}/refs.toon")
-
-    for pg, s in scenes.items():
+def run(only=None, scene_pass=True, data_dir=DATA):
+    plan = plan_v3.load(data_dir)
+    refman = toon_io.load(f"{data_dir}/refs.toon") if os.path.exists(f"{data_dir}/refs.toon") else {}
+    for sc in plan["scenes"]:
+        pg = plan_v3.page_id(sc)
         if only and pg not in only:
             continue
-        path = f"{ART}/page_{pg}.png"
+        present = sc.get("chars", [])
+        if not present:
+            continue
+        path = f"{ART}/page_{plan_v3.slug(pg)}.png"
         if not os.path.exists(path):
             continue
-        present = s["chars"]
-        plocks = _present_locks(locks, present)
-        page = open(path, "rb").read()
-        backup = f"{ART}/page_{pg}.orig.png"
+        locks = plan_v3.present_locks(plan, present)
+        distinguish = plan_v3.group_distinguish(plan, present)
+        backup = f"{ART}/page_{plan_v3.slug(pg)}.orig.png"
         if not os.path.exists(backup):
-            open(backup, "wb").write(page)
-        print(f"[{pg}] present: {present}")
+            open(backup, "wb").write(open(path, "rb").read())
+        print(f"[{pg}] present: {len(present)} chars")
         try:
-            _correct_one(pg, s, path, present, plocks, refman, scene_pass)
+            _correct_one(path, sc, plan, present, locks, distinguish, refman, scene_pass)
         except Exception as e:
             print(f"   ! {pg}: correction skipped ({str(e)[:100]})")
     print("correction done.")
 
 
-def _correct_one(pg, s, path, present, plocks, refman, scene_pass):
-        page = open(path, "rb").read()
-        # 1-2) match characters, regenerate from reference if wrong
-        for attempt in range(1, TRIES + 1):
-            verdict = judge(page, plocks)
-            for v in verdict:
-                tag = "ok" if v.get("correct", True) else f"FIX — {v.get('issue','')}"
-                print(f"   {v.get('name','?'):<8} {tag}")
-            wrong = _wrong(verdict)
-            if not wrong:
-                break
-            page = fix_chars(page, wrong, refman, plocks)
-            open(path, "wb").write(page)
-            print(f"   -> characters corrected (attempt {attempt})")
-
-        # 3) perfect the scene (guarded — revert if it breaks a character)
-        if scene_pass:
-            polished = perfect_scene(page, s["scene"])
-            if not _wrong(judge(polished, plocks)):
-                page = polished
-                open(path, "wb").write(page)
-                print("   -> scene perfected")
-            else:
-                print("   -> scene pass skipped (would break a character)")
+def _correct_one(path, sc, plan, present, locks, distinguish, refman, scene_pass):
+    page = open(path, "rb").read()
+    for attempt in range(1, TRIES + 1):
+        verdict = judge(page, locks, distinguish)
+        for v in verdict:
+            tag = "ok" if v.get("correct", True) else f"FIX — {v.get('issue','')}"
+            print(f"   {str(v.get('name','?'))[:22]:<22} {tag}")
+        wrong = _wrong(verdict)
+        if not wrong:
+            break
+        page = fix_chars(page, wrong, plan, present, refman, locks, distinguish)
+        open(path, "wb").write(page)
+        print(f"   -> characters corrected (attempt {attempt})")
+    if scene_pass:
+        polished = perfect_scene(page, plan_v3.scene_desc(sc))
+        if not _wrong(judge(polished, locks, distinguish)):
+            open(path, "wb").write(polished)
+            print("   -> scene perfected")
+        else:
+            print("   -> scene pass skipped (would break a character)")
 
 
 if __name__ == "__main__":
