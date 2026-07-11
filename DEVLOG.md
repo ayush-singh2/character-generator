@@ -8,6 +8,30 @@ and the files touched.
 
 ---
 
+## v3.0 — Full TOON rebuild: correct character model, coordinate scenes, complete book (2026-07-11)
+Client rejected v5 (every page wrong). Root cause found: **the character model was
+wrong** — manuscript + author's real photo + client's V6 interior say Bilbo & Obi
+are BOTH golden retrievers, distinguished ONLY by hat colour (Bilbo=green,
+Obi=blue) + baseball bandanas. v4/v5 had invented "red B cap / brown beagle Obi".
+Rebuilt from scratch per client spec:
+- **TOON not JSON** (`toon_io.py`, python-toon) for all data.
+- **Fresh refs from the manuscript** (`refs_v3.py`) — stylise the real photo into a
+  DUO sheet (green vs blue hat) + individual sheets + Homer + Mom/Dad from photos.
+- **Coordinate scenes** (`layout_v3.py`) — per-scene character boxes + text zone.
+- **Generate** (`generate_v3.py`) via Gemini from refs + textual coordinates
+  (dropped the drawn sketch after it leaked boxes into the art) with hat-colour +
+  golden-tone identity locks.
+- **Correct** (`correct_v3.py`) — client's flow: match characters → regenerate from
+  reference (DUO sheet) if wrong → guarded scene-perfect pass.
+- **Compose** (`compose_v3.py`) — text with a soft white bloom, NO card/border seam.
+- **Book** (`book_v3.py`) — 15 pages (11 single + 4 spread) → PDF.
+Hardened editor/llm retries (no-image + empty-body) + per-page resilient correction.
+**Result:** `v3/output/Bilbo_Obi_s_Baseball_Adventure_v3.pdf` — 15 pages, correct &
+consistent golden retrievers (green=Bilbo/blue=Obi), consistent Mom/Dad, on-script
+scenes, clean text. Big improvement over v4/v5. Some correction calls hit provider
+400s and were skipped (base art already good). See [[bilbo-character-model-corrected]],
+[[v6-interior-reference]], [[toon-data-format]].
+
 ## v2.3 — Approach 1 built + correction backend found (2026-07-10)
 Built and validated Approach 1 (correct-after) end-to-end on a fresh render of
 pages 3–10 (isolated demo `books/bilbo-approach1-demo/`, reuses Bilbo data/refs,
