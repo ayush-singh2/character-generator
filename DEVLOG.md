@@ -8,6 +8,27 @@ and the files touched.
 
 ---
 
+## v3.1 — Generic manuscript-driven pipeline + Ella book from scratch (2026-07-12)
+Generalised v3 so ANY manuscript .docx runs end-to-end, and fixed the Bilbo text
+overlap.
+- **parse_v3**: manuscript .docx -> rich art plan (per-book STYLE chosen by an art
+  director, designed characters w/ appearance/palette/outfit/consistency,
+  look-alike groups, per-page scenes). Addresses "TOON too low content".
+- **plan_v3**: shared helpers; all stages now data-driven (no Bilbo hardcoding).
+- **compose_v3**: VISION-based text placement (finds the genuinely empty region)
+  -> fixes the text/character overlap on Bilbo pages 3/4/8/15; soft bloom, no seam.
+  generate_v3 also reserves the text band harder.
+- **toon_io**: python-toon's strict decoder trips on deeply-nested data (scene
+  chars[], group members[]); store canonical JSON + `.view.toon` sidecar, use TOON
+  via for_prompt() where token savings matter. Also: tab delimiter (comma-safe),
+  downscale images for vision calls (fewer empty-response failures).
+- Reliability: 0 crashes / 0 skipped pages on the Ella run (vs Bilbo run's API hiccups).
+**Result:** `books/ella-the-animal-shelter-and-you/v3/output/ella__the_animal_shelter__and_you.pdf`
+— 18 pages, brand-new book from ONLY the manuscript. Distinct warm inclusive style
+(Christian Robinson / Vashti Harrison influences), consistent Ella + Ms. Rosa +
+named dogs, inclusive incidental kids (incl. wheelchair user), clean text, good
+cover. Run cost ~$4. See [[img2img-consistency-pivot]], [[toon-data-format]].
+
 ## v3.0 — Full TOON rebuild: correct character model, coordinate scenes, complete book (2026-07-11)
 Client rejected v5 (every page wrong). Root cause found: **the character model was
 wrong** — manuscript + author's real photo + client's V6 interior say Bilbo & Obi
