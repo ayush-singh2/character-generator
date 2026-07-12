@@ -51,6 +51,18 @@ def _find_zone(img_bytes, prefer):
     return None, True
 
 
+def _busy(im, box, thresh=34.0):
+    """True if the text region has high detail/contrast (needs a scrim)."""
+    W, H = im.size
+    region = im.crop((int(box[0] * W), int(box[1] * H),
+                      int(box[2] * W), int(box[3] * H))).convert("L")
+    edges = region.filter(ImageFilter.FIND_EDGES)
+    px = list(edges.getdata())
+    if not px:
+        return False
+    return (sum(px) / len(px)) > thresh
+
+
 def _fit(draw, text, bw, bh, hi, lo):
     f, lines, lh = None, [text], hi
     for size in range(hi, lo, -2):
@@ -97,9 +109,24 @@ def compose(only=None, data_dir=DATA):
         ink = (38, 32, 28) if dark_text else (250, 248, 244)
         glow = (255, 255, 255) if dark_text else (25, 22, 20)
 
+        # If the text area is busy/detailed, lay a soft feathered scrim behind the
+        # text block so it separates cleanly (no hard card, just a gentle wash).
+        block_h = lh * len(lines)
+        by0 = y0 + pad + max(0, (bh - block_h) / 2)
+        out = im.convert("RGBA")
+        if _busy(im, box):
+            scrim = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            sd = ImageDraw.Draw(scrim)
+            m = 0.02 * W
+            sd.rounded_rectangle([x0 - m, by0 - m, x1 + m, by0 + block_h + m],
+                                 radius=int(0.03 * W),
+                                 fill=(glow + (150,)))
+            scrim = scrim.filter(ImageFilter.GaussianBlur(int(0.02 * W)))
+            out = Image.alpha_composite(out, scrim)
+
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         ld = ImageDraw.Draw(layer)
-        ty = y0 + pad + max(0, (bh - lh * len(lines)) / 2)
+        ty = by0
         for i, l in enumerate(lines):
             lw = ld.textlength(l, font=f)
             ld.text((x0 + pad + (bw - lw) / 2, ty + i * lh), l, font=f, fill=ink + (255,))
@@ -108,7 +135,7 @@ def compose(only=None, data_dir=DATA):
         halo = halo.point(lambda v: int(v * 0.92))
         halo_layer = Image.new("RGBA", (W, H), glow + (0,))
         halo_layer.putalpha(halo)
-        out = Image.alpha_composite(im.convert("RGBA"), halo_layer)
+        out = Image.alpha_composite(out, halo_layer)
         out = Image.alpha_composite(out, layer).convert("RGB")
         out.save(f"{OUT}/page_{plan_v3.slug(pg)}.png")
         print(f"  [{pg}] text placed @ {[round(b,2) for b in box]} ({len(lines)} lines)")

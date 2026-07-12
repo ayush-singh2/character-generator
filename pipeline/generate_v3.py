@@ -91,7 +91,10 @@ def generate(only=None, data_dir=DATA):
                if locks else "")
             + (f"KEEP DISTINCT: {distinguish}.\n" if distinguish else "")
             + "Full-bleed art filling the whole frame. Do NOT draw any boxes, "
-            "rectangles, panels, borders or grey bars. No text or letters."
+            "rectangles, panels, borders or grey bars.\n"
+            "CRITICAL: the illustration must contain ZERO written text — no words, "
+            "captions, labels, signs, letters or numbers anywhere in the image. Do "
+            "not write the character descriptions into the picture. Art only."
         )
         try:
             out = editor.edit(instr, _refs_for(plan, present, refman))

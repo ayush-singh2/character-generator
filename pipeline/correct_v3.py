@@ -86,8 +86,10 @@ def perfect_scene(page_bytes, desc):
     instr = (
         f"Polish this children's picture-book illustration so it clearly depicts: "
         f"{desc}. Fix awkward anatomy or artifacts and improve clarity, but KEEP each "
-        "character's identity, poses and the overall composition the same. No text, "
-        "letters, boxes or borders."
+        "character's identity, poses and the overall composition the same. "
+        "IMPORTANT: REMOVE any written words, captions, labels or letters that appear "
+        "anywhere in the image — the illustration must contain zero text. No boxes or "
+        "borders either."
     )
     return editor.edit(instr, [page_bytes])
 
