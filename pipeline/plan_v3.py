@@ -11,7 +11,14 @@ import os
 
 from . import toon_io
 
-DATA = "v3/data"
+# Base working dir for a book version; override with V3_DIR to run versions
+# side-by-side (e.g. V3_DIR=v3b) without overwriting an existing v3/.
+BASE = os.getenv("V3_DIR", "v3")
+DATA = f"{BASE}/data"
+REFS = f"{BASE}/refs"
+ART = f"{BASE}/output/art"
+PAGES = f"{BASE}/output/pages"
+OUT = f"{BASE}/output"
 
 
 def slug(name):

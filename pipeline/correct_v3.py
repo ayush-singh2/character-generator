@@ -30,16 +30,18 @@ def _small(img_bytes, maxpx=896):
     im.save(buf, "JPEG", quality=88)
     return buf.getvalue()
 
-DATA = "v3/data"
-ART = "v3/output/art"
+from .plan_v3 import DATA, ART  # noqa: F401
 TRIES = int(os.getenv("V3_FIX_TRIES", "2"))
 
 JUDGE_SYSTEM = """\
-You check a children's picture-book page against the EXPECTED characters. For each \
-expected character decide if it is present and matches its description (species, \
-hair, outfit, colours, signature items). If two look-alike characters are noted, \
-check they are kept distinct. Reply ONLY JSON:
-[{"name":"<name>","present":true|false,"correct":true|false,"issue":"<short>"}]"""
+You check a children's picture-book page against the EXPECTED characters. Be STRICT
+about identity — small drift matters because the character must look IDENTICAL on
+every page. For each expected character check ALL of: species/type, hair (style,
+colour, length), skin tone, outfit and its colours, and every signature item
+(hats, accessories, collars, logos). Mark correct=false if ANY of these differs
+from the description, even slightly. If two look-alike characters are noted, verify
+they are clearly distinct. Reply ONLY JSON, naming the exact mismatch:
+[{"name":"<name>","present":true|false,"correct":true|false,"issue":"<what differs>"}]"""
 
 
 def _refmap(refman):

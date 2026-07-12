@@ -15,9 +15,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from . import plan_v3
 from .llm import chat_json_image
 
-DATA = "v3/data"
-ART = "v3/output/art"
-OUT = "v3/output/pages"
+from .plan_v3 import DATA, ART, PAGES as OUT  # noqa: F401
 SERIF_B = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 
 PLACE_SYSTEM = """\

@@ -6,9 +6,7 @@ from PIL import Image
 
 from . import plan_v3
 
-DATA = "v3/data"
-PAGES = "v3/output/pages"
-OUT = "v3/output"
+from .plan_v3 import DATA, PAGES, OUT  # noqa: F401
 
 
 def build(data_dir=DATA):

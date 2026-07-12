@@ -9,7 +9,7 @@ import os
 
 from . import llm, plan_v3, toon_io
 
-DATA = "v3/data"
+from .plan_v3 import DATA
 
 SYSTEM = """\
 You are a picture-book art director. Given ONE scene (its illustration description \

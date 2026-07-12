@@ -15,7 +15,7 @@ import os
 
 from . import editor, plan_v3, toon_io
 
-REFS = "v3/refs"
+from .plan_v3 import REFS
 
 
 def _photo(c):
@@ -23,7 +23,8 @@ def _photo(c):
     return open(p, "rb").read() if p and os.path.exists(p) else None
 
 
-def generate(only=None, data_dir="v3/data"):
+def generate(only=None, data_dir=None):
+    data_dir = data_dir or plan_v3.DATA
     os.makedirs(REFS, exist_ok=True)
     plan = plan_v3.load(data_dir)
     style = plan_v3.style_text(plan)

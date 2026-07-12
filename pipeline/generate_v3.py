@@ -12,9 +12,7 @@ import os
 
 from . import editor, plan_v3, toon_io
 
-DATA = "v3/data"
-REFS = "v3/refs"
-ART = "v3/output/art"
+from .plan_v3 import DATA, REFS, ART  # noqa: F401
 
 
 def _pos_words(box):
