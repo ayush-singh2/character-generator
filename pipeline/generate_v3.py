@@ -8,9 +8,30 @@ fully present) are passed to the image editor. Incidental characters are drawn
 from their written description. Output -> v3/output/art/page_<pg>.png.
 """
 
+import io
 import os
 
+from PIL import Image, ImageFilter
+
 from . import editor, plan_v3, toon_io
+
+NS_TRIES = int(os.getenv("V3_NS_TRIES", "3"))   # attempts to get an empty text band
+
+
+def _band_box(side):
+    return {"top": (0, 0, 1, 0.30), "bottom": (0, 0.70, 1, 1),
+            "left": (0, 0, 0.30, 1), "right": (0.70, 0, 1, 1)}.get(side, (0, 0, 1, 0.30))
+
+
+def _band_energy(img_bytes, side):
+    """Mean edge energy in the reserved band — low means genuinely empty."""
+    im = Image.open(io.BytesIO(img_bytes)).convert("L")
+    W, H = im.size
+    x0, y0, x1, y1 = _band_box(side)
+    band = im.crop((int(x0 * W), int(y0 * H), int(x1 * W), int(y1 * H)))
+    edges = band.filter(ImageFilter.FIND_EDGES)
+    px = list(edges.getdata())
+    return (sum(px) / len(px)) if px else 999.0
 
 from .plan_v3 import DATA, REFS, ART  # noqa: F401
 
@@ -81,27 +102,53 @@ def generate(only=None, data_dir=DATA):
                   "centre gutter)") if spread else "SQUARE single page"
         locks = plan_v3.present_locks(plan, present)
         distinguish = plan_v3.group_distinguish(plan, present)
-        instr = (
-            f"Create a children's picture-book illustration. STYLE: {style}.\n"
-            f"FORMAT: {aspect}.\n"
-            f"SCENE: {desc}\n"
-            + (f"PLACE THE CHARACTERS (approximate):\n{placement}\n" if placement else "")
-            + f"{tz}\n"
-            + (f"CHARACTER IDENTITY (match the reference sheets EXACTLY): {locks}.\n"
-               if locks else "")
-            + (f"KEEP DISTINCT: {distinguish}.\n" if distinguish else "")
-            + "Full-bleed art filling the whole frame. Do NOT draw any boxes, "
-            "rectangles, panels, borders or grey bars.\n"
-            "CRITICAL: the illustration must contain ZERO written text — no words, "
-            "captions, labels, signs, letters or numbers anywhere in the image. Do "
-            "not write the character descriptions into the picture. Art only."
-        )
-        try:
-            out = editor.edit(instr, _refs_for(plan, present, refman))
-        except Exception as e:
-            print(f"  [{pg}] generate failed: {str(e)[:100]}"); continue
+        side = (layouts.get(pg) or {}).get("empty_side") or sc.get("text_area") or "top"
+        refs = _refs_for(plan, present, refman)
+
+        best = None  # (bytes, energy)
+        for attempt in range(1, NS_TRIES + 1):
+            band = (f"COMPOSITION RULE (critical): keep the entire {side} ~30% of the "
+                    f"frame as EMPTY open background — sky, wall, ceiling or plain "
+                    f"colour — with NO character, face, head, hat or important object "
+                    f"in it. Push all characters and action into the opposite part of "
+                    f"the frame so the {side} band stays clear for text.")
+            if attempt > 1:
+                band = ("MOST IMPORTANT: the previous version put characters in the "
+                        f"text band. REDRAW with the {side} ~30% COMPLETELY EMPTY "
+                        f"(only sky/plain background there); move ALL dogs, people and "
+                        f"objects fully out of the {side} band. ") + band
+            instr = (
+                f"Create a children's picture-book illustration. STYLE: {style}.\n"
+                f"FORMAT: {aspect}.\n"
+                f"SCENE: {desc}\n"
+                + (f"PLACE THE CHARACTERS (approximate):\n{placement}\n" if placement else "")
+                + f"{band}\n"
+                + (f"CHARACTER IDENTITY (match the reference sheets EXACTLY): {locks}.\n"
+                   if locks else "")
+                + (f"KEEP DISTINCT: {distinguish}.\n" if distinguish else "")
+                + "Full-bleed art filling the whole frame. Do NOT draw any boxes, "
+                "rectangles, panels, borders or grey bars.\n"
+                "CRITICAL: the illustration must contain ZERO written text — no words, "
+                "captions, labels, signs, letters or numbers anywhere in the image. Do "
+                "not write the character descriptions into the picture. Art only."
+            )
+            try:
+                out = editor.edit(instr, refs)
+            except Exception as e:
+                print(f"  [{pg}] generate attempt {attempt} failed: {str(e)[:80]}")
+                continue
+            energy = _band_energy(out, side)
+            if best is None or energy < best[1]:
+                best = (out, energy)
+            calm = energy < 22.0
+            print(f"  [{pg}] attempt {attempt}: {side}-band energy={energy:.1f} "
+                  f"-> {'clear' if calm else 'busy'}")
+            if calm:
+                break
+        if best is None:
+            print(f"  [{pg}] all attempts failed — skip"); continue
         path = f"{ART}/page_{plan_v3.slug(pg)}.png"
-        open(path, "wb").write(out)
+        open(path, "wb").write(best[0])
         print(f"  [{pg}] -> {path}  ({'spread' if spread else 'single'}, {len(present)} chars)")
 
 
