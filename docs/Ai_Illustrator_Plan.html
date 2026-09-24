@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Illustrator — Delivery Plan</title>
+<style>
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Regular.ttf'); font-weight:400; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Medium.ttf'); font-weight:500; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-SemiBold.ttf'); font-weight:600; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Bold.ttf'); font-weight:700; }
+@font-face { font-family:'Lora'; src:url('_fonts/Lora.ttf'); font-weight:400 700; }
+
+:root{
+  --teal:#0e7c72;
+  --teal-line:#17a08f;
+  --teal-deep:#0c5d55;
+  --wash:#e9f6f2;
+  --wash-line:#bfe3da;
+  --ink:#20292b;
+  --muted:#7c8a8c;
+  --red:#c0392b;
+  --border:#e4eae9;
+  --blue:#7ecbe6;
+  --pink:#f6b8d2;
+  --coral:#f4a794;
+  --grey:#d9dede;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:'Lora',Georgia,serif;
+  color:var(--ink);
+  font-size:11.2pt;
+  line-height:1.5;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+@page{ size:Letter; margin:14mm 15mm; }
+
+h1,h2,h3,h4,.label,.sec-num,.pill,.flow-hd,.tab,.legend b,.stat-num,.stat-tgt,.wk-goal,table,.ownlist{
+  font-family:'Poppins',Arial,sans-serif;
+}
+
+/* ---------- section scaffolding ---------- */
+.section{ break-before:page; padding-top:6mm; }
+.section.tight{ padding-top:4mm; }
+.card,.fault,.stat,.risk,.need,.after{ break-inside:avoid; }
+.sec-num{
+  text-align:center; color:var(--teal); font-weight:600;
+  letter-spacing:.5em; font-size:10pt; text-indent:.5em;
+  margin:0 0 6px;
+}
+h2{
+  text-align:center; font-weight:700; font-size:22pt; color:var(--ink);
+  margin:0 0 8px; letter-spacing:-.01em;
+}
+.rule-d{ width:64px; height:0; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 12px; }
+.rule-d::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.sec-intro{ text-align:center; color:var(--muted); max-width:560px; margin:0 auto 18px; font-size:11pt; line-height:1.5; }
+.contd{ text-align:center; color:var(--muted); font-family:'Poppins',sans-serif; letter-spacing:.18em; font-size:9pt; margin:0 0 20px; }
+
+/* ---------- cover ---------- */
+.cover{ height:calc(100vh - 40mm); display:flex; flex-direction:column; }
+.cover-mid{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+h1{ font-weight:700; font-size:52pt; margin:0 0 14px; letter-spacing:-.02em; }
+.cover-sub{ color:var(--ink); font-size:13pt; margin:0 0 14px; }
+.cover-rule{ width:64px; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 26px; }
+.cover-rule::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.cover-lead{ max-width:520px; color:var(--ink); font-size:12pt; line-height:1.6; }
+.cover-foot{ display:flex; gap:0; border-top:1px solid var(--border); }
+.cover-foot .cell{ flex:1; text-align:center; padding:16px 20px; }
+.cover-foot .cell+.cell{ border-left:1px solid var(--border); }
+.cover-foot .k{ font-family:'Poppins',sans-serif; letter-spacing:.22em; font-size:8pt; color:var(--muted); }
+.cover-foot .v{ font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5pt; margin:6px 0 5px; }
+.cover-foot .s{ font-family:'Poppins',sans-serif; letter-spacing:.12em; font-size:8pt; color:var(--muted); }
+
+/* ---------- generic cards ---------- */
+.grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.grid5{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+.card{ border:1px solid var(--border); border-radius:4px; padding:16px 16px 18px; }
+.card h4{ text-align:center; font-weight:600; font-size:11.5pt; margin:0 0 8px; }
+.card p{ text-align:center; color:var(--ink); font-size:9.6pt; line-height:1.5; margin:0; }
+
+/* ---------- callout wash box ---------- */
+.wash{ background:var(--wash); border-top:1.5px solid var(--teal-line); border-bottom:1.5px solid var(--teal-line); padding:20px 26px; margin-top:22px; break-inside:avoid; }
+.wash h4{ text-align:center; font-family:'Poppins',sans-serif; font-weight:600; font-size:12pt; margin:0 0 8px; }
+.wash p{ text-align:center; color:var(--ink); font-size:10pt; margin:0; line-height:1.55; }
+.worth-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 30px; }
+.worth b{ font-family:'Poppins',sans-serif; font-weight:600; font-size:10pt; }
+.worth-item{ border-left:2px solid var(--wash-line); padding-left:12px; }
+.worth-item p{ text-align:left; color:#4c5a5c; font-size:9.4pt; margin:3px 0 0; }
+.worth h4{ text-align:left; margin-bottom:14px; }
+
+/* ---------- stat cards (section II) ---------- */
+.stat{ border:1px solid var(--border); border-radius:4px; padding:16px 12px 18px; text-align:center; }
+.stat .lab{ font-family:'Poppins',sans-serif; font-size:9pt; color:var(--muted); min-height:34px; display:flex; align-items:center; justify-content:center; }
+.stat-num{ font-weight:700; font-size:34pt; color:var(--red); line-height:1; margin:6px 0 8px; }
+.stat-num.none{ font-size:20pt; }
+.stat .tgtlab{ font-family:'Poppins',sans-serif; letter-spacing:.12em; font-size:7.2pt; color:var(--muted); }
+.stat-tgt{ font-weight:700; font-size:15pt; color:var(--teal); margin-top:4px; }
+.stat .bar{ height:3px; background:#eceeee; border-radius:2px; margin-top:10px; position:relative; }
+.stat .bar i{ position:absolute; left:0; top:0; height:100%; background:var(--red); border-radius:2px; }
+
+/* ---------- faults (section III) ---------- */
+.fault{ border:1px solid var(--border); border-left:3px solid var(--teal); border-radius:3px; padding:12px 16px 12px; }
+.fault .n{ text-align:center; font-family:'Poppins',sans-serif; font-weight:700; font-size:14pt; color:var(--teal); margin:0 0 3px; }
+.fault h4{ text-align:center; font-weight:600; font-size:11pt; margin:0 0 6px; }
+.fault p{ text-align:center; color:#4c5a5c; font-size:9.3pt; margin:0 0 8px; line-height:1.35; }
+.fault .addr{ text-align:center; font-family:'Poppins',sans-serif; letter-spacing:.14em; font-size:7.4pt; color:var(--teal); border-top:1px solid var(--border); padding-top:8px; }
+.fault.key{ background:var(--wash); border-left-color:var(--teal); }
+.fault.key .diamond{ text-align:center; color:var(--teal); font-size:12pt; }
+
+/* ---------- flow diagram (IV / VII) ---------- */
+.flow{ border:2px solid var(--ink); padding:9px 0 10px; break-inside:avoid; }
+.flow-col{ width:360px; margin:0 auto; }
+.flow-box{ border:1px solid rgba(0,0,0,.18); padding:6px 16px 7px; text-align:center; }
+.flow-box .flow-hd{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.12em; font-size:7.4pt; color:#183038; padding-bottom:5px; border-bottom:1px solid rgba(0,0,0,.28); margin-bottom:5px; }
+.flow-box p{ margin:0; font-size:8.3pt; line-height:1.28; color:#223; }
+.flow-arrow{ text-align:center; color:#9aa; font-size:10pt; line-height:1; margin:1px 0; }
+.b-blue{ background:var(--blue); } .b-pink{ background:var(--pink); } .b-coral{ background:var(--coral); } .b-grey{ background:var(--grey); }
+.legend{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid var(--border); margin-top:14px; }
+.legend .cell{ text-align:center; padding:10px 14px; }
+.legend .cell+.cell{ border-left:1px solid var(--border); }
+.legend .sw{ display:inline-block; width:30px; height:5px; border-radius:3px; margin-bottom:8px; }
+.legend b{ display:block; font-weight:600; font-size:11.5pt; margin-bottom:6px; }
+.legend p{ margin:0; font-size:8.8pt; color:var(--muted); line-height:1.45; }
+
+/* ---------- week by week (V) ---------- */
+.week{ border:1px solid var(--border); border-top:3px solid var(--teal-line); border-radius:3px; margin-bottom:9px; overflow:hidden; break-inside:avoid; }
+.wk-head{ display:flex; align-items:center; gap:16px; padding:7px 18px; background:#fbfdfd; }
+.wk-head.you{ background:var(--wash); }
+.pill{ background:var(--teal-deep); color:#fff; font-weight:600; letter-spacing:.16em; font-size:7.6pt; padding:6px 12px; border-radius:2px; white-space:nowrap; }
+.wk-head.you .pill{ background:#0b6f65; }
+.wk-goal{ font-weight:600; font-size:12pt; color:var(--ink); }
+.wk-body{ padding:6px 18px 4px; }
+.wk-body ul{ list-style:none; margin:0; padding:0; }
+.wk-body li{ position:relative; padding:4px 0 4px 20px; font-size:9.5pt; line-height:1.36; border-bottom:1px solid #eef2f1; color:#33403f; }
+.wk-body li:last-child{ border-bottom:0; }
+.wk-body li::before{ content:'—'; position:absolute; left:0; color:var(--teal-line); }
+.outcome{ background:var(--wash); border-left:3px solid var(--teal); margin:6px 18px 8px; padding:7px 16px; }
+.outcome .k{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.14em; font-size:7.4pt; color:var(--teal-deep); margin-bottom:4px; }
+.outcome p{ margin:0; font-size:9.4pt; line-height:1.42; color:#33403f; }
+
+/* ---------- milestone table (VI) ---------- */
+table{ width:100%; border-collapse:collapse; font-size:9.3pt; }
+thead th{ background:var(--wash); color:var(--teal-deep); font-weight:600; text-align:left; padding:8px 8px; border-bottom:2px solid var(--ink); font-size:9pt; }
+thead th.c{ text-align:center; }
+tbody td{ padding:6px 8px; border-bottom:1px solid var(--border); }
+tbody td.mono{ font-family:'DejaVu Sans Mono','Liberation Mono',monospace; text-align:center; font-size:9.2pt; }
+tbody td.wk{ font-family:'DejaVu Sans Mono','Liberation Mono',monospace; font-weight:700; }
+.r{ color:var(--red); } .t{ color:var(--teal); font-weight:700; } .k{ color:#20292b; }
+
+/* ---------- risks (VIII) ---------- */
+.risk{ border:1px solid var(--border); border-left:3px solid var(--teal-deep); border-radius:3px; padding:16px 18px; }
+.risk h4{ text-align:center; font-weight:600; font-size:11pt; margin:0 0 6px; }
+.risk .sub{ text-align:center; color:#4c5a5c; font-size:9.3pt; margin:0 0 12px; }
+.risk .resp{ text-align:center; font-size:9.3pt; color:#33403f; margin:0; }
+.risk .resp b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+/* ---------- own list (IX) ---------- */
+.ownbox{ border:1px solid var(--border); border-radius:4px; padding:10px 26px; }
+.ownlist{ list-style:none; margin:0; padding:0; }
+.ownlist li{ position:relative; padding:14px 0 14px 30px; border-bottom:1px solid var(--border); font-size:10pt; line-height:1.5; }
+.ownlist li:last-child{ border-bottom:0; }
+.ownlist li::before{ content:'\2713'; position:absolute; left:0; top:13px; color:var(--teal); font-weight:700; }
+.ownlist b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+/* ---------- need-from-you (X) / after (XI) ---------- */
+.need{ border:1px solid var(--border); border-top:3px solid var(--teal-line); border-radius:3px; padding:16px; text-align:center; }
+.need .k{ font-family:'Poppins',sans-serif; letter-spacing:.18em; font-size:8pt; color:var(--muted); }
+.need .wk{ font-family:'Poppins',sans-serif; font-weight:700; font-size:18pt; margin:8px 0 10px; }
+.need p{ margin:0; font-size:9.4pt; color:#4c5a5c; line-height:1.5; }
+.after{ border:1px solid var(--border); border-radius:4px; padding:16px 18px; }
+.after h4{ font-weight:600; font-size:11pt; margin:0 0 8px; }
+.after p{ margin:0; font-size:9.4pt; color:#4c5a5c; line-height:1.5; }
+.footnote{ color:var(--muted); font-size:8.8pt; line-height:1.55; text-align:center; max-width:600px; margin:26px auto 0; border-top:1px solid var(--border); padding-top:18px; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-mid">
+    <h1>AI Illustrator</h1>
+    <div class="cover-sub">The machine that turns a manuscript into a finished picture book</div>
+    <div class="cover-rule"></div>
+    <p class="cover-lead">In twelve weeks you receive both books finished and print-ready, and you own the tool that produced them. From that point, adding a further title becomes a matter of days rather than months.</p>
+  </div>
+  <div class="cover-foot">
+    <div class="cell">
+      <div class="k">DELIVERED</div>
+      <div class="v">Two finished books</div>
+      <div class="s">ELLA AND BILBO, PRINT-READY</div>
+    </div>
+    <div class="cell">
+      <div class="k">DELIVERED</div>
+      <div class="v">The AI illustrator</div>
+      <div class="s">REUSABLE ON EVERY FUTURE TITLE</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ I — WHAT WE ARE BUILDING ============ -->
+<div class="section">
+  <div class="sec-num">I</div>
+  <h2>What we are actually building</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">You receive both books finished and print-ready, and the tool that produced them. It takes a manuscript in at one end and hands a print-ready picture book out at the other.</p>
+
+  <div class="grid3">
+    <div class="card"><h4>It reads the manuscript</h4><p>The story is broken into pages, and the illustration notes are treated as binding instructions rather than loose suggestions.</p></div>
+    <div class="card"><h4>It keeps a fixed cast</h4><p>Each character is drawn once, held to exact colours and clothing, and reused, so nobody changes shape between pages.</p></div>
+    <div class="card"><h4>It composes each page</h4><p>Backgrounds and characters are assembled with a quiet area reserved for the words before anything is drawn.</p></div>
+    <div class="card"><h4>It sets the words</h4><p>Captions and bubbles are placed where they can be read, checked for contrast, and kept word for word to the manuscript.</p></div>
+    <div class="card"><h4>It builds the book</h4><p>Front matter, story, back matter and cover are assembled at one trim size and exported ready for the printer.</p></div>
+    <div class="card"><h4>It marks its own work</h4><p>An independent scorecard reads the finished book page by page and reports what still falls short.</p></div>
+  </div>
+
+  <div class="wash worth">
+    <h4>What the tool is worth after delivery</h4>
+    <div class="worth-grid">
+      <div class="worth-item"><b>Repeatable, not one-off.</b><p>The same steps run again on a manuscript nobody has seen yet.</p></div>
+      <div class="worth-item"><b>It keeps your decisions.</b><p>Cast, colours and layout rules stay stored, so the next book starts where this one finished.</p></div>
+      <div class="worth-item"><b>Built in replaceable parts.</b><p>A better method for one step drops in without rebuilding the rest.</p></div>
+      <div class="worth-item"><b>It checks itself.</b><p>The scorecard measures a new book before anyone reads it.</p></div>
+      <div class="worth-item"><b>The value compounds.</b><p>The books hold their value as titles, and the tool adds to it on every commission after.</p></div>
+      <div class="worth-item"><b>Days, not months.</b><p>The next title starts with the cast built and the rules already written.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ II — WHERE IT STANDS TODAY ============ -->
+<div class="section">
+  <div class="sec-num">II</div>
+  <h2>Where the AI illustrator stands today</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">You cannot improve a machine you are not measuring. These scores come from a page-by-page review of 39 pages it has produced, read by eye against the character reference sheets. They are deliberately not the machine's opinion of itself, because that self-check only looks at what it was told to look at.</p>
+
+  <div class="grid5">
+    <div class="stat"><div class="lab">Characters look the same on every page</div><div class="stat-num">75</div><div class="tgtlab">TARGET BY WEEK TWELVE</div><div class="stat-tgt">90</div><div class="bar"><i style="width:75%"></i></div></div>
+    <div class="stat"><div class="lab">Calm space on the art for the words to sit in</div><div class="stat-num">70</div><div class="tgtlab">TARGET BY WEEK TWELVE</div><div class="stat-tgt">90</div><div class="bar"><i style="width:70%"></i></div></div>
+    <div class="stat"><div class="lab">Words are clear, correct and easy to read</div><div class="stat-num">72</div><div class="tgtlab">TARGET BY WEEK TWELVE</div><div class="stat-tgt">90</div><div class="bar"><i style="width:72%"></i></div></div>
+    <div class="stat"><div class="lab">Scenes and props match the illustration notes</div><div class="stat-num">72</div><div class="tgtlab">TARGET BY WEEK TWELVE</div><div class="stat-tgt">90</div><div class="bar"><i style="width:72%"></i></div></div>
+    <div class="stat"><div class="lab">Speech and thought bubbles</div><div class="stat-num none">None</div><div class="tgtlab">TARGET BY WEEK TWELVE</div><div class="stat-tgt">90</div><div class="bar"><i style="width:4%"></i></div></div>
+  </div>
+
+  <div class="wash">
+    <h4>A note on the numbers</h4>
+    <p>These targets are set to be realistic rather than flattering. Every measure is scored out of 100, and 90 is the level we believe is genuinely achievable in twelve weeks, so it is the figure we are willing to be held to. Each measure reaches 90 in the week whose work owns it and then holds there. Book structure is the exception. It is a pass or fail check on every page, and it has to come back clean before delivery.</p>
+  </div>
+</div>
+
+<!-- ============ III — THE SIX FAULTS ============ -->
+<div class="section">
+  <div class="sec-num">III</div>
+  <h2>The six faults in it today</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each is a gap in the machine, not a mistake on one page, so fixing it once fixes it for every book that follows. Each fault is owned by a single week, in the order a reader would notice it.</p>
+
+  <div class="grid2" style="gap:12px;">
+    <div class="fault"><div class="n">01</div><h4>Characters change between pages</h4><p>Size, face and clothing shift from page to page. Ella appears twice on one page, Obi loses his hat, and Mom's red jersey comes and goes.</p><div class="addr">ADDRESSED IN WEEKS 2 AND 3</div></div>
+    <div class="fault"><div class="n">02</div><h4>Words land on busy artwork</h4><p>Text is placed over fences, crowds and shopfronts because no quiet area was planned for it before the picture was drawn.</p><div class="addr">ADDRESSED IN WEEK 4</div></div>
+    <div class="fault"><div class="n">03</div><h4>Some captions are hard to read</h4><p>One caption is scrambled into nonsense, and white text over a pale sky has too little contrast to read comfortably.</p><div class="addr">ADDRESSED IN WEEK 5</div></div>
+    <div class="fault"><div class="n">04</div><h4>Working notes leak onto the page</h4><p>Internal instructions have been printed as if they were part of the story, and the back cover is still a placeholder.</p><div class="addr">ADDRESSED IN WEEK 6</div></div>
+    <div class="fault"><div class="n">05</div><h4>No speech or thought bubbles</h4><p>Dialogue is only ever narrated. The bubbles readers expect in this kind of book were never built.</p><div class="addr">ADDRESSED IN WEEK 7</div></div>
+    <div class="fault"><div class="n">06</div><h4>Scenes and props miss the notes</h4><p>Invented extras appear that were never asked for, such as a hot dog stand, and some figures are stretched, duplicated or cropped off awkwardly.</p><div class="addr">ADDRESSED IN WEEK 8</div></div>
+    <div class="fault key"><div class="diamond">&#9670;</div><h4>The one change that unlocks the rest</h4><p>Drawing each character separately and placing them into the scene fixes their size and appearance, and records where each one sits, which is what makes quiet space and readable text possible.</p><div class="addr">WEEKS 2 TO 5 BUILD ON THIS</div></div>
+    <div class="fault key"><div class="diamond">&#9670;</div><h4>Why the build weeks are not redrawn twice</h4><p>Weeks 2 to 8 each retire one fault, applied only to the pages it touches. Week 9 runs the finished process end to end once, so no book is ever redrawn twice.</p><div class="addr">ONE FAULT PER WEEK, IN ORDER</div></div>
+  </div>
+</div>
+
+<!-- ============ IV — HOW THE TWELVE WEEKS FLOW ============ -->
+<div class="section">
+  <div class="sec-num">IV</div>
+  <h2>How the twelve weeks flow</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Every stage upgrades the AI illustrator, and nothing later depends on a promise, only on work that has already passed its check.</p>
+
+  <div class="flow">
+    <div class="flow-col">
+      <div class="flow-box b-blue"><div class="flow-hd">WEEK 1</div><p>We build an honest scorecard first, so every claim we make later can be checked independently</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEKS 2 TO 5</div><p>We rebuild how the artwork is made, so characters stay the same, each page has calm space, and the words sit clearly on the art</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-coral"><div class="flow-hd">WEEK 6</div><p>We fix the book structure and send you one complete book at the halfway mark, so direction is confirmed early</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEKS 7 AND 8</div><p>We add speech and thought bubbles, then make every page match the location and props its notes call for</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEK 9</div><p>We run both books end to end on the finished process, one integrated production pass, checked page by page against the scorecard</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-coral"><div class="flow-hd">WEEKS 10 AND 11</div><p>You review both complete books, and we work through your notes without letting any measure slip</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-grey"><div class="flow-hd">WEEK 12</div><p>We prepare the print files, run the final check, and hand you the finished machine along with both books</p></div>
+    </div>
+
+    <div class="legend">
+      <div class="cell"><span class="sw" style="background:var(--blue)"></span><b>Blue</b><p>Groundwork. It measures the truth before anything is built.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--pink)"></span><b>Pink</b><p>Building. These weeks change how the artwork is produced.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--coral)"></span><b>Coral</b><p>Review. Work stops moving forward until someone checks it.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--grey)"></span><b>Grey</b><p>Delivery. Print files, final check and hand-over.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ V — WEEK BY WEEK ============ -->
+<div class="section" style="padding-top:3mm;">
+  <div class="sec-num">V</div>
+  <h2>Week by week</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each week has one headline goal and one outcome, and does not close until that outcome is met or the miss is written down.</p>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK ONE &middot; GROUNDWORK</span><span class="wk-goal">Measure honestly before building anything</span></div>
+    <div class="wk-body"><ul>
+      <li>Turn the six problems above into a repeatable scorecard that reads a finished book page by page.</li>
+      <li>Keep the scorecard separate from the software that makes the art, so it is free to disagree with it.</li>
+      <li>Add a short human review sheet for the things software judges poorly, such as readability and taste.</li>
+      <li>Save today's books as the frozen starting point that all progress is measured against.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>The scorecard reproduces the hand review within five points on both books, and the report is saved to file rather than shown on screen and lost.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK TWO &middot; BUILDING</span><span class="wk-goal">Run both full books through the new drawing method</span></div>
+    <div class="wk-body"><ul>
+      <li>Draw each main character once in every pose the books need, then reuse those drawings everywhere.</li>
+      <li>Draw each background without characters in it, then place the characters into the scene at a set size and position.</li>
+      <li>Record exactly where each character sits on each page, which every later week relies on.</li>
+      <li>Make this the standard way both books are produced from now on.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Both books are rebuilt on the new drawing method, character size varies by no more than five percent across pages, and the duplicate Ella and missing hat problems are gone.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK THREE &middot; BUILDING</span><span class="wk-goal">Hold the people and the look-alikes steady</span></div>
+    <div class="wk-body"><ul>
+      <li>Lock every recurring person to exact colours and clothing, so an outfit cannot drift between pages.</li>
+      <li>Bring the people who appear on three or more pages into the same reuse method as the animals.</li>
+      <li>Create a paired reference for characters who look similar, so the two dogs and the two girls stay distinct.</li>
+      <li>Extend the scorecard to check clothing specifically.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Character consistency reaches 90 out of 100, with no clothing drift on any named character. This measure now holds at 90 for the rest of the project.</p></div>
+  </div>
+</div>
+
+<!-- V continued -->
+<div class="section tight">
+  <div class="contd">WEEK BY WEEK &middot; CONTINUED</div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK FOUR &middot; BUILDING</span><span class="wk-goal">Design a calm area into every page</span></div>
+    <div class="wk-body"><ul>
+      <li>Decide where the words will go before the picture is drawn, then ask for open sky, soft ground or plain wall in that spot.</li>
+      <li>Use the known character positions from week 2 to keep faces and bodies out of the text area.</li>
+      <li>Raise or lower the horizon where it helps create that open space naturally.</li>
+      <li>Check how busy the text area actually is, and redraw the page if it is too cluttered.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Calm space reaches 90 out of 100, every page passes the clutter check in its text area, and the measure holds at 90 from here on.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK FIVE &middot; BUILDING</span><span class="wk-goal">Rebuild how the words sit on the art</span></div>
+    <div class="wk-body"><ul>
+      <li>Fix the fault that scrambled a caption into nonsense.</li>
+      <li>Place text using the known character positions and the calm area, at one consistent size across the book.</li>
+      <li>Guarantee readable contrast by adapting the ink colour and adding a soft glow behind it, with no boxed label look.</li>
+      <li>Carry the manuscript wording through unchanged, so what is printed matches the author's text exactly.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Readability reaches 90 out of 100, contrast passes on every page, no caption is scrambled, cut off or split across the spine, and the measure holds at 90.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head you"><span class="pill">WEEK SIX &middot; YOUR FIRST LOOK</span><span class="wk-goal">Fix the book structure and send you one complete book</span></div>
+    <div class="wk-body"><ul>
+      <li>Write the real front and back matter, including title page, dedication, about the author, a note on fostering and volunteering, and the back cover.</li>
+      <li>Add a hard stop that fails the build if any internal note reaches a printed page.</li>
+      <li>Assemble the book in manuscript order at one consistent trim size.</li>
+      <li>Send you the stronger of the two books in full, so direction can be confirmed at the halfway mark rather than at the end.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Structure comes back clean with no leaked notes and correct front and back matter, and your first round of feedback is logged.</p></div>
+  </div>
+</div>
+
+<!-- V continued -->
+<div class="section tight">
+  <div class="contd">WEEK BY WEEK &middot; CONTINUED</div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK SEVEN &middot; BUILDING</span><span class="wk-goal">Add speech and thought bubbles</span></div>
+    <div class="wk-body"><ul>
+      <li>Separate spoken lines from narration and from a character's private thoughts.</li>
+      <li>Draw speech bubbles with a tail pointing at the speaker, and thought bubbles as clouds with trailing dots.</li>
+      <li>Keep bubbles clear of faces, key artwork and the calm text area.</li>
+      <li>Check that each bubble is readable and points at the right character.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Bubbles reach 90 out of 100 wherever dialogue exists, hold at 90, and can be switched off per book if you prefer them used sparingly.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK EIGHT &middot; BUILDING</span><span class="wk-goal">Make every page match the location and props</span></div>
+    <div class="wk-body"><ul>
+      <li>Treat the illustration notes in the manuscript as binding, so the location and named props are not open to interpretation.</li>
+      <li>Reject invented extras that were never asked for, such as a hot dog stand that does not belong in the scene.</li>
+      <li>Catch stretched limbs, duplicated figures and subjects cropped off awkwardly.</li>
+      <li>Keep faces and key objects away from the centre fold on double page spreads.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Scene accuracy reaches 90 out of 100, every page matches the location and props its notes call for, with no warped, duplicated or badly cropped artwork.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK NINE &middot; BUILDING</span><span class="wk-goal">Run both books end to end on the finished process</span></div>
+    <div class="wk-body"><ul>
+      <li>Produce both books in a single integrated pass on the finished process, so the parts are proven to work together and not just on their own.</li>
+      <li>Score every page on all six measures and rank any remaining gaps by how much a reader would notice them.</li>
+      <li>Fix the worst first and rerun until every measure holds at its target.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Both books hold the week 12 targets on our own scorecard, produced in one integrated run rather than a second full redraw, before you are asked to look at them.</p></div>
+  </div>
+</div>
+
+<!-- V continued -->
+<div class="section tight">
+  <div class="contd">WEEK BY WEEK &middot; CONTINUED</div>
+
+  <div class="week">
+    <div class="wk-head you"><span class="pill">WEEK TEN &middot; YOUR REVIEW</span><span class="wk-goal">Both complete books go to you</span></div>
+    <div class="wk-body"><ul>
+      <li>Deliver both full books, with a short note explaining what changed since the starting point and by how much.</li>
+      <li>Sort every comment you make into a category, so recurring themes are handled once rather than page by page.</li>
+      <li>Agree together on what must be fixed, what would be nice to fix, and what falls outside this project.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>A complete, agreed and prioritised list of your feedback, with an estimate against each item.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK ELEVEN &middot; BUILDING</span><span class="wk-goal">Work through your notes without breaking what already works</span></div>
+    <div class="wk-body"><ul>
+      <li>Complete every item on the agreed must-fix list.</li>
+      <li>Rerun the full review after each batch, because late changes have previously undone earlier wins.</li>
+      <li>Write any new preference of yours into the standing rules, so it is applied automatically from then on.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>The agreed must-fix list is closed, no measure has slipped below its week 9 level, and you are happy with a preview.</p></div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK TWELVE &middot; DELIVERY</span><span class="wk-goal">Print preparation and hand-over</span></div>
+    <div class="wk-body"><ul>
+      <li>Prepare proper print files with the correct trim, bleed and safe margins, at print resolution and in print colour.</li>
+      <li>Run the final review on the print files themselves, because correct on screen is not the same as correct on press.</li>
+      <li>Hand over the machine itself, together with the fixed cast, the scorecard and a one page guide to running it on the next manuscript.</li>
+      <li>Hand over the print files, the source files and the final report alongside it.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>The machine is handed over and proven on a new manuscript, both books meet their targets, the print specification is validated, and you sign off.</p></div>
+  </div>
+</div>
+
+<!-- ============ VI — PROGRESS TABLE ============ -->
+<div class="section">
+  <div class="sec-num">VI</div>
+  <h2>The progress you should expect to see</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Scores are out of 100. Each measure climbs in the week whose task owns it, reaches 90 there, and then holds. Book structure is a pass or fail check rather than a score.</p>
+  <p style="text-align:center;font-size:9.5pt;margin:-14px 0 20px;color:#4c5a5c;"><span class="r" style="font-weight:700;">Red</span> is still short of the target. <span class="t">Teal</span> is the week a target is reached and held.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Week</th><th>Milestone</th>
+        <th class="c">Characters</th><th class="c">Calm space</th><th class="c">Readability</th><th class="c">Bubbles</th><th class="c">Scene</th><th class="c">Structure</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="wk">0</td><td>Starting point, measured by hand</td><td class="mono r">75</td><td class="mono r">70</td><td class="mono r">72</td><td class="mono r">none</td><td class="mono r">72</td><td class="mono r">failing</td></tr>
+      <tr><td class="wk">2</td><td>New drawing method on both books</td><td class="mono k">84</td><td class="mono r">72</td><td class="mono r">72</td><td class="mono r">none</td><td class="mono r">74</td><td class="mono r">failing</td></tr>
+      <tr><td class="wk">3</td><td>People and clothing held steady</td><td class="mono t">90</td><td class="mono r">76</td><td class="mono r">73</td><td class="mono r">none</td><td class="mono r">75</td><td class="mono r">failing</td></tr>
+      <tr><td class="wk">4</td><td>Calm space designed in</td><td class="mono k">90</td><td class="mono t">90</td><td class="mono r">80</td><td class="mono r">none</td><td class="mono r">78</td><td class="mono r">failing</td></tr>
+      <tr><td class="wk">5</td><td>Words rebuilt on the art</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono t">90</td><td class="mono r">none</td><td class="mono r">82</td><td class="mono r">partial</td></tr>
+      <tr><td class="wk">6</td><td>Structure fixed, first book to you</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono r">none</td><td class="mono r">84</td><td class="mono t">clean</td></tr>
+      <tr><td class="wk">7</td><td>Bubbles added</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono t">90</td><td class="mono r">86</td><td class="mono k">clean</td></tr>
+      <tr><td class="wk">8</td><td>Scenes and props matched</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono t">90</td><td class="mono k">clean</td></tr>
+      <tr><td class="wk">9</td><td>Final integrated production run</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">clean</td></tr>
+      <tr><td class="wk">10 to 11</td><td>Your review and the fixes</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">90</td><td class="mono k">clean</td></tr>
+      <tr><td class="wk">12</td><td>Print ready and handed over</td><td class="mono t">90</td><td class="mono t">90</td><td class="mono t">90</td><td class="mono t">90</td><td class="mono t">90</td><td class="mono t">clean</td></tr>
+    </tbody>
+  </table>
+
+  <div class="wash" style="margin-left:auto;margin-right:auto;max-width:640px;">
+    <h4>What 90 looks like on the page</h4>
+    <p>At 90 a reader gets through the book without being pulled out of the story by anything on it. Past that point the remaining calls are made by eye rather than by measurement, which is why the final pass before delivery is a person reading the book rather than a score.</p>
+  </div>
+</div>
+
+<!-- ============ VII — WHERE THE WEEKS GO ============ -->
+<div class="section">
+  <div class="sec-num">VII</div>
+  <h2>Where the twelve weeks actually go</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Rebuilding how the artwork is made takes the largest share, because character consistency is the keystone every later week reuses.</p>
+
+  <div class="flow">
+    <div class="flow-col">
+      <div class="flow-box b-blue"><div class="flow-hd">ABOUT ONE THIRD</div><p>rebuilds how the art is made, weeks 2 to 5: characters, calm space and the words, the foundation every later week reuses</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-blue"><div class="flow-hd">ABOUT ONE SIXTH</div><p>adds the last two capabilities, weeks 7 and 8: speech and thought bubbles, then scene and prop accuracy</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">ABOUT ONE SIXTH</div><p>fixes book structure and delivers your first book in week 6, then runs the final integrated production pass in week 9</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-coral"><div class="flow-hd">ABOUT ONE SIXTH</div><p>is your review and the fixes, weeks 10 and 11, plus the honest scorecard built in week 1</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-grey"><div class="flow-hd">THE FINAL WEEK</div><p>is print preparation and the hand-over of everything we have made</p></div>
+    </div>
+
+    <div class="legend">
+      <div class="cell"><span class="sw" style="background:var(--blue)"></span><b>Blue</b><p>The two largest areas of work, which carry the most risk.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--pink)"></span><b>Pink</b><p>Structure and the single integrated production pass.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--coral)"></span><b>Coral</b><p>Time reserved for checking and for your feedback.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--grey)"></span><b>Grey</b><p>The closing week of print preparation and hand-over.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VIII — WHAT COULD SLOW US DOWN ============ -->
+<div class="section">
+  <div class="sec-num">VIII</div>
+  <h2>What could slow us down</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each of these is known in advance and has a planned response.</p>
+
+  <div class="grid2" style="gap:16px;">
+    <div class="risk"><h4>Placed characters could look pasted on</h4><p class="sub">Drawing characters separately risks a cut and paste feel on busy pages.</p><p class="resp"><b>Response.</b> A blending step, a size check in week 2, and the older drawing method kept available as a fallback for individual pages.</p></div>
+    <div class="risk"><h4>A pose we need might be missing</h4><p class="sub">If a character was never drawn crouching, that page ends up awkward.</p><p class="resp"><b>Response.</b> Audit the pose set against both manuscripts in week 2 and draw extras on demand.</p></div>
+    <div class="risk"><h4>Bubbles could crowd the text</h4><p class="sub">Bubbles and captions compete for the same clear space on a page.</p><p class="resp"><b>Response.</b> Bubbles are built in week 7, after the text placement work, so they reuse the same layout rules rather than fighting them.</p></div>
+    <div class="risk"><h4>Late feedback could arrive in bulk</h4><p class="sub">A large set of notes at week 10 would compress the remaining schedule.</p><p class="resp"><b>Response.</b> The week 6 checkpoint puts a complete book in front of you at the halfway mark, so direction is confirmed early.</p></div>
+    <div class="risk"><h4>Late fixes could undo earlier wins</h4><p class="sub">This has happened before, where a fix in one place reopened a problem elsewhere.</p><p class="resp"><b>Response.</b> The full review is rerun after every batch of fixes in week 11, and no measure is allowed to slip below its week 9 level.</p></div>
+    <div class="risk"><h4>Content filters could block a reference</h4><p class="sub">Automated safety filters occasionally reject images of children or animals.</p><p class="resp"><b>Response.</b> The existing rewording and fallback handling stays in place, and this has been low impact so far.</p></div>
+  </div>
+</div>
+
+<!-- ============ IX — WHAT YOU OWN ============ -->
+<div class="section">
+  <div class="sec-num">IX</div>
+  <h2>What you own at the end</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">The tool comes first on this list on purpose, because it is the part that keeps paying. Nothing is called complete until every item holds.</p>
+
+  <div class="ownbox">
+    <ul class="ownlist">
+      <li><b>The AI illustrator itself,</b> able to take a new manuscript and return a finished book with only light touch-up by hand.</li>
+      <li><b>The fixed cast,</b> so returning characters look the same in the next book as they did in this one.</li>
+      <li><b>The scorecard,</b> so the quality of any future book can be measured rather than argued about.</li>
+      <li><b>A short guide</b> covering how to run the machine on the next title.</li>
+      <li>Both books scoring 90 out of 100 on all five measured dimensions.</li>
+      <li>No internal notes on any page, with correct front and back matter and one consistent trim size.</li>
+      <li>Every caption readable, contrast checked, clear of the centre fold and word for word to the manuscript.</li>
+      <li>Print files at print resolution and colour, with the correct bleed and trim, signed off by you.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ X — WHAT WE NEED FROM YOU ============ -->
+<div class="section">
+  <div class="sec-num">X</div>
+  <h2>What we need from you</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Three moments where your input keeps the schedule on track.</p>
+
+  <div class="grid3">
+    <div class="need"><div class="k">FIRST LOOK</div><div class="wk">Week Six</div><p>Review one complete book and confirm the overall direction. Roughly two to three days of your time.</p></div>
+    <div class="need"><div class="k">FULL REVIEW</div><div class="wk">Week Ten</div><p>Review both full books and give consolidated notes. Roughly one week of your time.</p></div>
+    <div class="need"><div class="k">SIGN-OFF</div><div class="wk">Week Twelve</div><p>Approve the print files for hand-over. Roughly one to two days of your time.</p></div>
+  </div>
+
+  <div style="height:26px;"></div>
+  <div class="sec-num">XI</div>
+  <h2>What happens on the book after these two</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">This is the return on the twelve weeks, and the reason the machine matters more than the two books it produces.</p>
+
+  <div class="grid3">
+    <div class="after"><h4>The cast is already built</h4><p>Any character who returns is drawn and locked already, so a sequel starts with its cast in place rather than from a blank page.</p></div>
+    <div class="after"><h4>The rules are already written</h4><p>Every preference you gave us in weeks 6 and 10 stays encoded, so the next book starts finished instead of relearning your taste.</p></div>
+    <div class="after"><h4>The scorecard travels with it</h4><p>A new book can be measured on the same six dimensions before anyone reads it, so quality is checked rather than hoped for.</p></div>
+  </div>
+
+  <p class="footnote">Read this plan as the build log for the AI illustrator, with both finished books delivered alongside it. Starting point figures come from a page-by-page visual review of what the machine has produced so far, not from its own self-report. Every weekly finish line is measured by the independent scorecard built in week 1, which is deliberately able to disagree with the part of the machine that makes the artwork. Weeks 2 to 8 each retire one fault, week 9 runs the finished process once, and weeks 10 and 11 are for your review and its fixes.</p>
+</div>
+
+</body>
+</html>

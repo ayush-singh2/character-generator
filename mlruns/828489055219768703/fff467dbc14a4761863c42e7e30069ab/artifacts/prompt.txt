@@ -1,0 +1,1 @@
+(planned) Fix the defect only; keep composition and ALL characters fully within the frame; do not crop any character.

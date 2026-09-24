@@ -1,0 +1,14 @@
+artifact_uri: file:///home/lightningleapananlyics/Desktop/Projects/Image_generation/mlruns/828489055219768703/09aa350227ef4cce9b169300332ebdfc/artifacts
+end_time: 1790228245729
+entry_point_name: ''
+experiment_id: '828489055219768703'
+lifecycle_stage: active
+run_id: 09aa350227ef4cce9b169300332ebdfc
+run_name: v04_setaware_minsize_namedcast
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790228245687
+status: 3
+tags: []
+user_id: lightningleapananlyics

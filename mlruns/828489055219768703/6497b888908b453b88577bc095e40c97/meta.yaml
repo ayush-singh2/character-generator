@@ -1,0 +1,14 @@
+artifact_uri: file:///home/lightningleapananlyics/Desktop/Projects/Image_generation/mlruns/828489055219768703/6497b888908b453b88577bc095e40c97/artifacts
+end_time: 1790228246177
+entry_point_name: ''
+experiment_id: '828489055219768703'
+lifecycle_stage: active
+run_id: 6497b888908b453b88577bc095e40c97
+run_name: v11_erase_extra_body_manual
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790228246093
+status: 3
+tags: []
+user_id: lightningleapananlyics

@@ -1,0 +1,102 @@
+# v08_masked_inpaint_plain — Masked repair of the zebra (safety glitch)
+
+**status:** fail  |  **family:** C  |  **mentor-suggested:** True  |  **model:** `fal-ai/flux-general/inpainting`  |  **cost:** ~$0.05  |  **anatomy:** None  |  **cast:** None/5
+
+## Goal
+Fix only the zebra region of the GOOD original, freeze the rest.
+
+## Hypothesis (why we thought it would work)
+A mask over the zebra lets the model repaint only that area; the rest is preserved pixel-for-pixel.
+
+## Models used
+inpaint: fal-ai/flux-general/inpainting (strength 0.9)
+
+## Source files / functions involved
+- `fal_backend.make_mask`
+- `fal_backend.inpaint`
+
+## What we did
+1. Mask the zebra region (white=repaint, black=keep)
+2. fal flux-general/inpainting, strength 0.9
+
+## Prompt / instruction
+A striped zebra standing upright, two legs two arms, watercolour; inpaint the masked zebra region.
+
+## Code — all snippets this pipeline used
+```python
+# ---- [1] pipeline.fal_backend.make_mask ------------------------------
+def make_mask(size, box, *, feather: int = 8) -> bytes:
+    """White-in-box, black-out mask PNG bytes for a normalised box on a WxH
+    image. Feathered so the inpaint seam blends."""
+    W, H = size
+    m = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(m).rectangle(
+        (int(box[0] * W), int(box[1] * H), int(box[2] * W), int(box[3] * H)),
+        fill=255)
+    if feather:
+        m = m.filter(ImageFilter.GaussianBlur(feather))
+    buf = io.BytesIO(); m.convert("RGB").save(buf, "PNG")
+    return buf.getvalue()
+
+# ---- [2] pipeline.fal_backend.inpaint --------------------------------
+def inpaint(image_bytes: bytes, mask_bytes: bytes, prompt: str, *,
+            strength: float = 0.9, steps: int = 32,
+            ip_adapter_ref: bytes | None = None, ip_scale: float = 0.7,
+            ip_refs: list | None = None) -> bytes:
+    """Masked inpaint via fal flux-general. Returns the full-page PNG bytes
+    (fal composites the frozen region back itself). Raises on a black result
+    (safety-checker glitch) so the caller can retry.
+
+    Identity conditioning: pass either `ip_adapter_ref` (+`ip_scale`) for a
+    single anchor, or `ip_refs` = [(bytes, scale), ...] for several — e.g. the
+    character SHEET (canonical identity) plus the original in-scene CROP
+    (pose/scale), which holds "zebra" far better than a lone weak adapter."""
+    fc = _client()
+    # fal_client.upload_file wants a path; write temp files
+    import tempfile
+    def _up(b, suffix=".png"):
+        f = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        f.write(b); f.flush(); f.close()
+        return fc.upload_file(f.name)
+
+    args = {
+        "image_url": _up(image_bytes),
+        "mask_url": _up(mask_bytes),
+        "prompt": prompt,
+        "strength": strength,
+        "num_inference_steps": steps,
+        "num_images": 1,
+        "enable_safety_checker": False,
+    }
+    refs = list(ip_refs or [])
+    if ip_adapter_ref is not None:
+        refs.append((ip_adapter_ref, ip_scale))
+    if refs:
+        args["ip_adapters"] = [{**_IP_ADAPTER, "image_url": _up(b), "scale": s}
+                               for b, s in refs]
+    r = fc.subscribe(_INPAINT_EP, arguments=args)
+    imgs = r.get("images") or []
+    if not imgs:
+        raise RuntimeError(f"fal inpaint returned no image: {str(r)[:160]}")
+    out = _download(imgs[0]["url"])
+    # guard against the black-image glitch
+    im = Image.open(io.BytesIO(out)).convert("L")
+    import numpy as np
+    if np.asarray(im).mean() < 8:
+        raise RuntimeError("fal returned a black image (safety-checker glitch); retry")
+    return out
+
+```
+
+## Result
+Returned an ALL-BLACK image.
+
+## Why it fails / caveat
+fal's safety checker intermittently blacks out benign images.
+
+## What we learned
+Disable safety checker + guard on mean-pixel<8.
+
+## Led to
+v09 — retry with safety off.
+

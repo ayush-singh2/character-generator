@@ -1,0 +1,1 @@
+Fix ONLY the striped zebra (chimera with an extra body/legs): make it a single upright bipedal zebra like the reference; keep the giraffe, pig, goat, sheep and studio unchanged.

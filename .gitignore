@@ -22,8 +22,14 @@ Illustration_guide/
 
 # client-supplied material — confidential, never publish
 CLIENT_DOC/
+Client_REVIEW/
+Frontend_DESIGN/
 data/reference_images/
 *.log
+
+# heavy web app + scratch dirs (kept out of the pipeline repo)
+frontend/
+baseline/
 
 # archives & tooling
 .archive_anthology/
@@ -36,3 +42,5 @@ data/reference_images/
 # archived finished books (moved here before each new generation)
 .archive_books/
 data/char_refs/
+*.zip
+frontend.zip

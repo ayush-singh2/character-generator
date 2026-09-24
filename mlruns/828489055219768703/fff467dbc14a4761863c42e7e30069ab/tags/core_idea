@@ -1,0 +1,1 @@
+Make Kontext keep all cast fully in-frame + preserve composition, then verify cross-page consistency and wire it into the pipeline.

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Illustrator — 7-Week Delivery Plan</title>
+<style>
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Regular.ttf'); font-weight:400; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Medium.ttf'); font-weight:500; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-SemiBold.ttf'); font-weight:600; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Bold.ttf'); font-weight:700; }
+@font-face { font-family:'Lora'; src:url('_fonts/Lora.ttf'); font-weight:400 700; }
+
+:root{
+  --teal:#0e7c72;
+  --teal-line:#17a08f;
+  --teal-deep:#0c5d55;
+  --wash:#e9f6f2;
+  --wash-line:#bfe3da;
+  --ink:#20292b;
+  --muted:#7c8a8c;
+  --red:#c0392b;
+  --border:#e4eae9;
+  --blue:#7ecbe6;
+  --pink:#f6b8d2;
+  --coral:#f4a794;
+  --grey:#d9dede;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:'Lora',Georgia,serif;
+  color:var(--ink);
+  font-size:11.2pt;
+  line-height:1.5;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+@page{ size:Letter; margin:14mm 15mm; }
+
+h1,h2,h3,h4,.label,.sec-num,.pill,.flow-hd,.tab,.legend b,.stat-num,.stat-tgt,.wk-goal,table,.ownlist{
+  font-family:'Poppins',Arial,sans-serif;
+}
+
+/* ---------- section scaffolding ---------- */
+.section{ break-before:page; padding-top:6mm; }
+.section.tight{ padding-top:4mm; }
+.card,.fault,.stat,.risk,.need,.after{ break-inside:avoid; }
+.sec-num{
+  text-align:center; color:var(--teal); font-weight:600;
+  letter-spacing:.5em; font-size:10pt; text-indent:.5em;
+  margin:0 0 6px;
+}
+h2{
+  text-align:center; font-weight:700; font-size:22pt; color:var(--ink);
+  margin:0 0 8px; letter-spacing:-.01em;
+}
+.rule-d{ width:64px; height:0; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 12px; }
+.rule-d::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.sec-intro{ text-align:center; color:var(--muted); max-width:560px; margin:0 auto 18px; font-size:11pt; line-height:1.5; }
+.contd{ text-align:center; color:var(--muted); font-family:'Poppins',sans-serif; letter-spacing:.18em; font-size:9pt; margin:0 0 20px; }
+
+/* ---------- cover ---------- */
+.cover{ height:calc(100vh - 40mm); display:flex; flex-direction:column; }
+.cover-mid{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+h1{ font-weight:700; font-size:52pt; margin:0 0 14px; letter-spacing:-.02em; }
+.cover-sub{ color:var(--ink); font-size:13pt; margin:0 0 14px; }
+.cover-rule{ width:64px; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 26px; }
+.cover-rule::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.cover-lead{ max-width:540px; color:var(--ink); font-size:12pt; line-height:1.6; }
+.cover-foot{ display:flex; gap:0; border-top:1px solid var(--border); }
+.cover-foot .cell{ flex:1; text-align:center; padding:16px 18px; }
+.cover-foot .cell+.cell{ border-left:1px solid var(--border); }
+.cover-foot .k{ font-family:'Poppins',sans-serif; letter-spacing:.22em; font-size:8pt; color:var(--muted); }
+.cover-foot .v{ font-family:'Poppins',sans-serif; font-weight:600; font-size:12pt; margin:6px 0 5px; }
+.cover-foot .s{ font-family:'Poppins',sans-serif; letter-spacing:.1em; font-size:7.6pt; color:var(--muted); }
+
+/* ---------- generic cards ---------- */
+.grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.grid5{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+.card{ border:1px solid var(--border); border-radius:4px; padding:16px 16px 18px; }
+.card h4{ text-align:center; font-weight:600; font-size:11.5pt; margin:0 0 8px; }
+.card p{ text-align:center; color:var(--ink); font-size:9.6pt; line-height:1.5; margin:0; }
+
+/* ---------- callout wash box ---------- */
+.wash{ background:var(--wash); border-top:1.5px solid var(--teal-line); border-bottom:1.5px solid var(--teal-line); padding:20px 26px; margin-top:22px; break-inside:avoid; }
+.wash h4{ text-align:center; font-family:'Poppins',sans-serif; font-weight:600; font-size:12pt; margin:0 0 8px; }
+.wash p{ text-align:center; color:var(--ink); font-size:10pt; margin:0; line-height:1.55; }
+.worth-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 30px; }
+.worth b{ font-family:'Poppins',sans-serif; font-weight:600; font-size:10pt; }
+.worth-item{ border-left:2px solid var(--wash-line); padding-left:12px; }
+.worth-item p{ text-align:left; color:#4c5a5c; font-size:9.4pt; margin:3px 0 0; }
+.worth h4{ text-align:left; margin-bottom:14px; }
+
+/* ---------- stat cards ---------- */
+.stat{ border:1px solid var(--border); border-radius:4px; padding:16px 12px 18px; text-align:center; }
+.stat .lab{ font-family:'Poppins',sans-serif; font-size:9pt; color:var(--muted); min-height:34px; display:flex; align-items:center; justify-content:center; }
+.stat-num{ font-weight:700; font-size:34pt; color:var(--red); line-height:1; margin:6px 0 8px; }
+.stat-num.none{ font-size:18pt; }
+.stat .tgtlab{ font-family:'Poppins',sans-serif; letter-spacing:.12em; font-size:7.2pt; color:var(--muted); }
+.stat-tgt{ font-weight:700; font-size:15pt; color:var(--teal); margin-top:4px; }
+.stat .bar{ height:3px; background:#eceeee; border-radius:2px; margin-top:10px; position:relative; }
+.stat .bar i{ position:absolute; left:0; top:0; height:100%; background:var(--red); border-radius:2px; }
+
+/* ---------- faults ---------- */
+.fault{ border:1px solid var(--border); border-left:3px solid var(--teal); border-radius:3px; padding:12px 16px 12px; }
+.fault .n{ text-align:center; font-family:'Poppins',sans-serif; font-weight:700; font-size:14pt; color:var(--teal); margin:0 0 3px; }
+.fault h4{ text-align:center; font-weight:600; font-size:11pt; margin:0 0 6px; }
+.fault p{ text-align:center; color:#4c5a5c; font-size:9.3pt; margin:0 0 8px; line-height:1.35; }
+.fault .addr{ text-align:center; font-family:'Poppins',sans-serif; letter-spacing:.14em; font-size:7.4pt; color:var(--teal); border-top:1px solid var(--border); padding-top:8px; }
+.fault.key{ background:var(--wash); border-left-color:var(--teal); }
+.fault.key .diamond{ text-align:center; color:var(--teal); font-size:12pt; }
+
+/* ---------- flow diagram ---------- */
+.flow{ border:2px solid var(--ink); padding:9px 0 10px; break-inside:avoid; }
+.flow-col{ width:380px; margin:0 auto; }
+.flow-box{ border:1px solid rgba(0,0,0,.18); padding:6px 16px 7px; text-align:center; }
+.flow-box .flow-hd{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.12em; font-size:7.4pt; color:#183038; padding-bottom:5px; border-bottom:1px solid rgba(0,0,0,.28); margin-bottom:5px; }
+.flow-box p{ margin:0; font-size:8.3pt; line-height:1.28; color:#223; }
+.flow-arrow{ text-align:center; color:#9aa; font-size:10pt; line-height:1; margin:1px 0; }
+.b-blue{ background:var(--blue); } .b-pink{ background:var(--pink); } .b-coral{ background:var(--coral); } .b-grey{ background:var(--grey); }
+.legend{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid var(--border); margin-top:14px; }
+.legend .cell{ text-align:center; padding:10px 14px; }
+.legend .cell+.cell{ border-left:1px solid var(--border); }
+.legend .sw{ display:inline-block; width:30px; height:5px; border-radius:3px; margin-bottom:8px; }
+.legend b{ display:block; font-weight:600; font-size:11.5pt; margin-bottom:6px; }
+.legend p{ margin:0; font-size:8.8pt; color:var(--muted); line-height:1.45; }
+
+/* ---------- week by week ---------- */
+.week{ border:1px solid var(--border); border-top:3px solid var(--teal-line); border-radius:3px; margin-bottom:10px; overflow:hidden; break-inside:avoid; }
+.wk-head{ display:flex; align-items:center; gap:16px; padding:7px 18px; background:#fbfdfd; }
+.wk-head.you{ background:var(--wash); }
+.pill{ background:var(--teal-deep); color:#fff; font-weight:600; letter-spacing:.1em; font-size:7.4pt; padding:6px 12px; border-radius:2px; white-space:nowrap; }
+.wk-head.you .pill{ background:#0b6f65; }
+.wk-goal{ font-weight:600; font-size:12pt; color:var(--ink); }
+.wk-body{ padding:6px 18px 4px; }
+.wk-body ul{ list-style:none; margin:0; padding:0; }
+.wk-body li{ position:relative; padding:4px 0 4px 20px; font-size:9.5pt; line-height:1.36; border-bottom:1px solid #eef2f1; color:#33403f; }
+.wk-body li:last-child{ border-bottom:0; }
+.wk-body li::before{ content:'—'; position:absolute; left:0; color:var(--teal-line); }
+.outcome{ background:var(--wash); border-left:3px solid var(--teal); margin:6px 18px 6px; padding:7px 16px; }
+.outcome .k{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.14em; font-size:7.4pt; color:var(--teal-deep); margin-bottom:4px; }
+.outcome p{ margin:0; font-size:9.4pt; line-height:1.42; color:#33403f; }
+
+/* ---------- twice-weekly client meetings ---------- */
+.meet{ display:flex; gap:0; border-top:1px solid #eef2f1; margin:0 18px 10px; }
+.meet .cell{ flex:1; padding:8px 16px; }
+.meet .cell+.cell{ border-left:1px solid #eef2f1; }
+.meet .k{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.14em; font-size:7.2pt; color:var(--teal-deep); margin-bottom:3px; }
+.meet p{ margin:0; font-size:9pt; line-height:1.38; color:#33403f; }
+
+/* ---------- milestone table ---------- */
+table{ width:100%; border-collapse:collapse; font-size:9pt; }
+thead th{ background:var(--wash); color:var(--teal-deep); font-weight:600; text-align:left; padding:8px 6px; border-bottom:2px solid var(--ink); font-size:8.6pt; }
+thead th.c{ text-align:center; }
+tbody td{ padding:6px 6px; border-bottom:1px solid var(--border); }
+tbody td.mono{ font-family:'DejaVu Sans Mono','Liberation Mono',monospace; text-align:center; font-size:8.8pt; }
+tbody td.wk{ font-family:'DejaVu Sans Mono','Liberation Mono',monospace; font-weight:700; }
+.r{ color:var(--red); } .t{ color:var(--teal); font-weight:700; } .k{ color:#20292b; }
+
+/* ---------- risks ---------- */
+.risk{ border:1px solid var(--border); border-left:3px solid var(--teal-deep); border-radius:3px; padding:16px 18px; }
+.risk h4{ text-align:center; font-weight:600; font-size:11pt; margin:0 0 6px; }
+.risk .sub{ text-align:center; color:#4c5a5c; font-size:9.3pt; margin:0 0 12px; }
+.risk .resp{ text-align:center; font-size:9.3pt; color:#33403f; margin:0; }
+.risk .resp b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+/* ---------- own list ---------- */
+.ownbox{ border:1px solid var(--border); border-radius:4px; padding:10px 26px; }
+.ownlist{ list-style:none; margin:0; padding:0; }
+.ownlist li{ position:relative; padding:13px 0 13px 30px; border-bottom:1px solid var(--border); font-size:10pt; line-height:1.5; }
+.ownlist li:last-child{ border-bottom:0; }
+.ownlist li::before{ content:'\2713'; position:absolute; left:0; top:12px; color:var(--teal); font-weight:700; }
+.ownlist b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+/* ---------- need-from-you / cadence ---------- */
+.need{ border:1px solid var(--border); border-top:3px solid var(--teal-line); border-radius:3px; padding:16px; text-align:center; }
+.need .k{ font-family:'Poppins',sans-serif; letter-spacing:.16em; font-size:8pt; color:var(--muted); }
+.need .wk{ font-family:'Poppins',sans-serif; font-weight:700; font-size:15pt; margin:8px 0 10px; }
+.need p{ margin:0; font-size:9.4pt; color:#4c5a5c; line-height:1.5; }
+.footnote{ color:var(--muted); font-size:8.8pt; line-height:1.55; text-align:center; max-width:600px; margin:26px auto 0; border-top:1px solid var(--border); padding-top:18px; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-mid">
+    <h1>AI Illustrator</h1>
+    <div class="cover-sub">Seven-week build plan — a general illustrator engine, delivered as a product</div>
+    <div class="cover-rule"></div>
+    <p class="cover-lead">The deliverable is the engine, not two books. In seven weeks we ship a reusable machine that turns <b>any</b> children's-book manuscript into a print-ready, professionally illustrated book — driven by a fine-tuned image model and run from a web app anyone can open. Ella and Bilbo are how we prove it works; the engine is what you keep and run on every title after.</p>
+  </div>
+  <div class="cover-foot">
+    <div class="cell">
+      <div class="k">THE PRODUCT</div>
+      <div class="v">A general engine</div>
+      <div class="s">ANY MANUSCRIPT, ANY CAST</div>
+    </div>
+    <div class="cell">
+      <div class="k">HOW YOU RUN IT</div>
+      <div class="v">A client web app</div>
+      <div class="s">VIEW · REVIEW · GENERATE</div>
+    </div>
+    <div class="cell">
+      <div class="k">HOW WE PROVE IT</div>
+      <div class="v">Two known books</div>
+      <div class="s">ELLA &amp; BILBO — THE TEST HARNESS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ I — WHAT WE ARE BUILDING ============ -->
+<div class="section">
+  <div class="sec-num">I</div>
+  <h2>What we are building</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">A general illustrator engine — a product, not a project. Any manuscript goes in one end and a print-ready picture book comes out the other, with no code changes per book. The consistency is learned into a fine-tuned model, and the whole run is driven from a web app rather than a developer console.</p>
+
+  <div class="grid3">
+    <div class="card"><h4>It reads any manuscript</h4><p>Any story is split into pages, and its illustration notes are treated as binding instructions — nothing about the book is hardcoded.</p></div>
+    <div class="card"><h4>It learns any cast</h4><p>Each main character is fine-tuned into the model as its own trained style, so it is painted naturally and identically on every page.</p></div>
+    <div class="card"><h4>It composes each page</h4><p>Backgrounds and characters are assembled with a quiet area reserved for the words before anything is drawn.</p></div>
+    <div class="card"><h4>It sets the words</h4><p>Captions and bubbles are placed where they can be read, checked for contrast, and kept word for word to the manuscript.</p></div>
+    <div class="card"><h4>It builds the book</h4><p>Front matter, story, back matter and cover are assembled at one trim size and exported ready for the printer.</p></div>
+    <div class="card"><h4>Anyone can run it</h4><p>A web app shows every page, the PDF and each character's locked look, and lets you upload a new manuscript and generate a book yourself.</p></div>
+  </div>
+
+  <div class="wash worth">
+    <h4>The product is the engine — the two books only prove it</h4>
+    <div class="worth-grid">
+      <div class="worth-item"><b>General, not two-book-specific.</b><p>Nothing is keyed to Ella or Bilbo; every character, scene and layout is derived from the manuscript at runtime.</p></div>
+      <div class="worth-item"><b>Proven on the unseen.</b><p>A third manuscript nobody has tuned for is run cold in week 6, so generality is measured, not assumed.</p></div>
+      <div class="worth-item"><b>Consistency becomes native.</b><p>The model learns each character, so identity is how it paints — not a correction bolted on afterwards.</p></div>
+      <div class="worth-item"><b>The cast is a reusable asset.</b><p>Trained character weights and stored rules carry into every future title, in this world or a new one.</p></div>
+      <div class="worth-item"><b>Runs as a product.</b><p>Upload, generate, review, export — a repeatable service, not a one-off render done by hand.</p></div>
+      <div class="worth-item"><b>Days, not months.</b><p>The next title starts with the engine built, the rules written, and the cast trainable on demand.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ II — WHERE IT STANDS TODAY ============ -->
+<div class="section">
+  <div class="sec-num">II</div>
+  <h2>Where it stands today</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">These scores come from a page-by-page review of 39 finished pages, read by eye against the character reference sheets — deliberately not the machine's opinion of itself. They are the starting line every week below is measured against.</p>
+
+  <div class="grid3" style="gap:12px;">
+    <div class="stat"><div class="lab">Characters look the same on every page</div><div class="stat-num">85</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">98</div><div class="bar"><i style="width:85%"></i></div></div>
+    <div class="stat"><div class="lab">Calm space on the art for the words</div><div class="stat-num">80</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">97</div><div class="bar"><i style="width:80%"></i></div></div>
+    <div class="stat"><div class="lab">Words are clear, correct and easy to read</div><div class="stat-num">81</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">98</div><div class="bar"><i style="width:81%"></i></div></div>
+    <div class="stat"><div class="lab">Speech and thought bubbles</div><div class="stat-num none">None</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">95</div><div class="bar"><i style="width:4%"></i></div></div>
+    <div class="stat"><div class="lab">Book structure and front/back matter</div><div class="stat-num none">Failing</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">Clean</div><div class="bar"><i style="width:20%"></i></div></div>
+    <div class="stat"><div class="lab">Client can view and steer the output</div><div class="stat-num none">None</div><div class="tgtlab">TARGET BY WEEK 7</div><div class="stat-tgt">Deployed</div><div class="bar"><i style="width:6%"></i></div></div>
+  </div>
+
+  <div class="wash">
+    <h4>What we already have to build on</h4>
+    <p>The full manuscript-to-PDF pipeline exists (parse, copyedit, references, layout, generate, correct, compose, book), with one rule file driving every client complaint into both the generator and the judge. Locked character specs, the categorised client feedback for both books, and the client's three printed interiors as ground truth are all in hand. The layered-compositing engine is kept as a per-page fallback. What is new this cycle is the fine-tuned model and the web app.</p>
+  </div>
+</div>
+
+<!-- ============ III — THE FAULTS WE CLOSE ============ -->
+<div class="section">
+  <div class="sec-num">III</div>
+  <h2>The faults we close</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each is a gap in the machine, not a mistake on one page, so fixing it once fixes it for every book that follows. Each is owned by a specific week.</p>
+
+  <div class="grid2" style="gap:12px;">
+    <div class="fault"><div class="n">01</div><h4>Characters change between pages</h4><p>Size, face and clothing shift page to page. Ella appears twice on one page, Obi loses his hat, Mom's red jersey comes and goes.</p><div class="addr">FINE-TUNED OUT IN WEEKS 1 TO 3</div></div>
+    <div class="fault"><div class="n">02</div><h4>Words land on busy artwork</h4><p>Text is placed over fences, crowds and shopfronts because no quiet area was planned before the picture was drawn.</p><div class="addr">ADDRESSED IN WEEK 4</div></div>
+    <div class="fault"><div class="n">03</div><h4>Some captions are hard to read</h4><p>One caption is scrambled into nonsense, and white text over a pale sky has too little contrast to read comfortably.</p><div class="addr">ADDRESSED IN WEEK 4</div></div>
+    <div class="fault"><div class="n">04</div><h4>Working notes leak onto the page</h4><p>Internal instructions have been printed as if part of the story, and the back cover is still a placeholder.</p><div class="addr">ADDRESSED IN WEEK 5</div></div>
+    <div class="fault"><div class="n">05</div><h4>No speech or thought bubbles</h4><p>Dialogue is only ever narrated. The bubbles readers expect in this kind of book were never built.</p><div class="addr">ADDRESSED IN WEEK 5</div></div>
+    <div class="fault"><div class="n">06</div><h4>The client cannot see or steer it</h4><p>The only front end is a broken Streamlit script. There is no way to browse pages, review, or generate a book without a developer.</p><div class="addr">BUILT ACROSS WEEKS 2 TO 6</div></div>
+    <div class="fault key"><div class="diamond">&#9670;</div><h4>The one change that unlocks the rest</h4><p>Fine-tuning a model per character makes identity and scale the model's native behaviour, so the generator stops fighting drift and the corrector is freed to fix composition instead.</p><div class="addr">WEEKS 1 TO 3 BUILD ON THIS</div></div>
+    <div class="fault key"><div class="diamond">&#9670;</div><h4>Why the web app runs in parallel</h4><p>The app is built read-only first, then viewer, feedback, and upload — so every Friday there is something the client can click, and it is shippable at each stage rather than all at the end.</p><div class="addr">A LITTLE EVERY WEEK</div></div>
+  </div>
+</div>
+
+<!-- ============ IV — HOW THE SEVEN WEEKS FLOW ============ -->
+<div class="section">
+  <div class="sec-num">IV</div>
+  <h2>How the seven weeks flow</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Every stage upgrades the engine, and nothing later depends on a promise — only on work that has already passed its check.</p>
+
+  <div class="flow">
+    <div class="flow-col">
+      <div class="flow-box b-blue"><div class="flow-hd">WEEK 1 &middot; 25&ndash;29 AUG</div><p>Fine-tune the image model per character, and build an honest scorecard so every later claim can be checked independently</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEKS 2 AND 3 &middot; 1&ndash;12 SEP</div><p>Make the fine-tuned model the default way pages are drawn, run the first full book on it, and stand up the web app viewer</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEK 4 &middot; 15&ndash;19 SEP</div><p>Design calm space into every page, rebuild how the words sit on the art, and let the client leave feedback in the app</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">WEEK 5 &middot; 22&ndash;26 SEP</div><p>Run the second book, fix the book structure and front/back matter, and add speech and thought bubbles</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-coral"><div class="flow-hd">WEEK 6 &middot; 29 SEP&ndash;3 OCT</div><p>Prove it on a brand-new manuscript it has never seen, let the client upload and generate, and make the files print-ready</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-grey"><div class="flow-hd">WEEK 7 &middot; 6&ndash;10 OCT</div><p>Work through final notes without regressions, deploy the web app, and hand over both books and the machine</p></div>
+    </div>
+
+    <div class="legend">
+      <div class="cell"><span class="sw" style="background:var(--blue)"></span><b>Blue</b><p>Groundwork. Fine-tune the model and measure the truth first.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--pink)"></span><b>Pink</b><p>Building. These weeks change how the artwork and words are made.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--coral)"></span><b>Coral</b><p>Proof. Generality, client-driven runs and print-readiness.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--grey)"></span><b>Grey</b><p>Delivery. Deploy, final check and hand-over.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ V — WEEK BY WEEK ============ -->
+<div class="section" style="padding-top:3mm;">
+  <div class="sec-num">V</div>
+  <h2>Week by week</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each week has one headline goal, one measurable outcome, and two client meetings — a Monday review and a Friday demo — and does not close until the outcome is met or the miss is written down.</p>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 1 &middot; 25&ndash;29 AUG &middot; FINE-TUNE</span><span class="wk-goal">Fine-tune the image model, and measure honestly</span></div>
+    <div class="wk-body"><ul>
+      <li>Set up fal.ai access and put the key in place; smoke-test one training call and one generation call before spending on real training.</li>
+      <li>Audit the training set: count images and pose variety per character, and flag anyone too thin to train well.</li>
+      <li>Build the dataset from each locked reference sheet — 15 to 25 varied poses, angles and expressions per character, each with a unique trigger word.</li>
+      <li>Train the first two characters (Ella, Bilbo) on fal.ai, store the trained weights, and wire generation to use them.</li>
+      <li>Build the independent scorecard, freeze today's books as the baseline, and A/B three pages: old method vs compositing vs fine-tuned.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Fine-tuning works for two characters; on the three test pages identity scores 95 or better and is judged more naturally painted than the compositing engine; the scorecard reproduces the hand review within five points and is saved to file.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>Present this plan and the baseline scorecard; agree to fine-tune first, with the web app built in parallel.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>The same character in several new poses, old method vs fine-tuned, side by side — identity now locked and painted, not pasted.</p></div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 2 &middot; 1&ndash;5 SEP &middot; BUILDING</span><span class="wk-goal">Fine-tuned model becomes the default; web app stands up</span></div>
+    <div class="wk-body"><ul>
+      <li>Train the remaining recurring characters across both books.</li>
+      <li>Make the fine-tuned path the default way pages are generated, injecting each character's trigger word and exact locked spec; keep compositing as a per-page fallback.</li>
+      <li>Now that identity is native, retune the correction step toward composition — scale, grounding, cropping, location and props — instead of chasing identity.</li>
+      <li>Stand up the web app's read-only back end: list books, fetch a book's pages and PDF, and fetch each character's locked references.</li>
+      <li>Scaffold the client's provided web design against one real book, and retire the Streamlit path from the client's view.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>A full page renders end to end on the fine-tuned engine, and the web app loads one real book — pages, PDF and character references — at a shareable link.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>Sign off the week-1 A/B results; walk through the client's front-end design exactly as we will build it.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>A live web link where the client browses a real book — the first time they see the actual thing in a proper app.</p></div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 3 &middot; 8&ndash;12 SEP &middot; BUILDING</span><span class="wk-goal">First full book on the fine-tuned engine; book viewer finished</span></div>
+    <div class="wk-body"><ul>
+      <li>Run the stronger book (Bilbo) end to end on the fine-tuned engine, and regenerate any page that fails the scorecard.</li>
+      <li>Extend the scorecard to check clothing persistence and character-size variance across the whole book.</li>
+      <li>Handle look-alikes who share a page (Bilbo and Obi) so the model keeps them distinct rather than averaging them.</li>
+      <li>Finish the web book viewer — page navigation, spread awareness and PDF download — to the provided design.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Bilbo is fully on the fine-tuned engine; consistency reaches 95 or better with size varying no more than five percent and no lost hats or drifting clothing; the whole book is browsable in the app.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>The fine-tuned engine running on a full book, with the scorecard trend since baseline.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>The complete Bilbo book, every page, inside the web app, with the consistency numbers alongside.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- V continued -->
+<div class="section tight">
+  <div class="contd">WEEK BY WEEK &middot; CONTINUED</div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 4 &middot; 15&ndash;19 SEP &middot; BUILDING</span><span class="wk-goal">Calm space and readable words; feedback in the app</span></div>
+    <div class="wk-body"><ul>
+      <li>Decide where the words will go before the picture is drawn, and pass that as a hard constraint asking for open sky, soft ground or plain wall there.</li>
+      <li>Fix the fault that scrambled a caption, lock one type size book-wide, and guarantee contrast with adaptive ink and a soft glow, no boxed label.</li>
+      <li>Carry the manuscript wording through unchanged, so printed text matches the author's text exactly.</li>
+      <li>Add clutter and contrast checks to the scorecard, and redraw any page whose text area is too busy.</li>
+      <li>Add per-page comments in the web app that write back into a feedback ledger mapped to our rule codes.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Calm space and readability both reach 95 or better; no caption is scrambled, cut off or low-contrast; and the client can leave feedback on any page in the app, stored and categorised automatically.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>Before-and-after on the worst old pages — words now sitting in real calm space and reading clearly.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>The in-app feedback round-trip: a comment on a page becomes a categorised item in the fix queue.</p></div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 5 &middot; 22&ndash;26 SEP &middot; BUILDING</span><span class="wk-goal">Second book, book structure, and bubbles</span></div>
+    <div class="wk-body"><ul>
+      <li>Run Ella end to end on the fine-tuned engine and regenerate any failures.</li>
+      <li>Author the real front and back matter — title, dedication, about the author, a fostering and volunteering note, back cover — and add a hard stop that fails the build if any internal note reaches a page.</li>
+      <li>Build speech bubbles with a tail to the speaker and thought bubbles as clouds with trailing dots, sized to the text and clear of faces and the calm area.</li>
+      <li>Extend the scorecard to check each bubble is readable and points at the right character.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Ella meets its targets on the fine-tuned engine; book structure comes back clean with no leaked notes and correct matter; and bubbles reach 95 or better wherever dialogue exists, switchable per book.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>Ella's regeneration in progress and the newly authored front and back matter.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>Both books complete in the web app, with correct structure and the new speech and thought bubbles.</p></div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head you"><span class="pill">WEEK 6 &middot; 29 SEP&ndash;3 OCT &middot; PROOF</span><span class="wk-goal">Prove generality, let the client generate, go print-ready</span></div>
+    <div class="wk-body"><ul>
+      <li>Run a brand-new, unseen manuscript cold — including auto-training its characters — with no code or data edits specific to it, and fix any gap as a general rule.</li>
+      <li>Prepare proper print files: correct trim, bleed and safe margins, at print resolution, in print colour, exported for the printer.</li>
+      <li>Add the manuscript upload-and-generate flow to the web app: start a run, watch live status, then see the finished book.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>The held-out book scores within five points of the two tuned books on every measure; a manuscript uploaded in the app produces a book; and the print file validates on trim, bleed, resolution and colour.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>The held-out result — a book the engine had never seen — and the print-ready export.</p></div>
+      <div class="cell"><div class="k">FRI &middot; DEMO</div><p>The client uploads a manuscript in the app and watches a book generate, hands-off.</p></div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="wk-head"><span class="pill">WEEK 7 &middot; 6&ndash;10 OCT &middot; DELIVERY</span><span class="wk-goal">Remediation, deploy, and hand-over</span></div>
+    <div class="wk-body"><ul>
+      <li>Clear the agreed must-fix list from the in-app feedback, rerunning the full scorecard after each batch so no measure slips.</li>
+      <li>Write any new preference into the standing rules, so it is applied automatically from then on.</li>
+      <li>Deploy the web app and its back end to a stable, client-accessible URL, and retire Streamlit entirely.</li>
+      <li>Run the final scorecard on the print files, and hand over the print PDFs, the source, the trained character weights and a one-page runbook.</li>
+    </ul></div>
+    <div class="outcome"><div class="k">OUTCOME</div><p>Both books meet their targets and pass the print check; the held-out book stays within five points; the web app is deployed and usable by the client; and you sign off.</p></div>
+    <div class="meet">
+      <div class="cell"><div class="k">MON &middot; REVIEW</div><p>The remediation burn-down and a regression scorecard showing nothing slipped back.</p></div>
+      <div class="cell"><div class="k">FRI &middot; FINAL</div><p>The deployed web app, both print-ready books, the held-out proof and the runbook — sign-off.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VI — PROGRESS TABLE ============ -->
+<div class="section">
+  <div class="sec-num">VI</div>
+  <h2>The progress you should expect to see</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Scores are out of 100. Each measure climbs in the week whose task owns it, reaches its target there, and then holds. Structure and the web app are pass-or-fail rather than scored.</p>
+  <p style="text-align:center;font-size:9.5pt;margin:-14px 0 20px;color:#4c5a5c;"><span class="r" style="font-weight:700;">Red</span> is still short of target. <span class="t">Teal</span> is the week a target is reached and held.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Week</th><th>Milestone</th>
+        <th class="c">Characters</th><th class="c">Calm space</th><th class="c">Readability</th><th class="c">Bubbles</th><th class="c">Structure</th><th class="c">Web app</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="wk">0</td><td>Starting point, measured by hand</td><td class="mono r">85</td><td class="mono r">80</td><td class="mono r">81</td><td class="mono r">none</td><td class="mono r">failing</td><td class="mono r">none</td></tr>
+      <tr><td class="wk">1</td><td>Model fine-tuned, scorecard built</td><td class="mono k">93*</td><td class="mono r">80</td><td class="mono r">81</td><td class="mono r">none</td><td class="mono r">failing</td><td class="mono r">none</td></tr>
+      <tr><td class="wk">2</td><td>Fine-tuned engine default, app scaffold</td><td class="mono k">95</td><td class="mono r">82</td><td class="mono r">82</td><td class="mono r">none</td><td class="mono r">failing</td><td class="mono k">read-only</td></tr>
+      <tr><td class="wk">3</td><td>First full book on fine-tuned engine</td><td class="mono k">96</td><td class="mono r">84</td><td class="mono r">84</td><td class="mono r">none</td><td class="mono r">failing</td><td class="mono k">viewer</td></tr>
+      <tr><td class="wk">4</td><td>Calm space and words rebuilt</td><td class="mono k">96</td><td class="mono t">95</td><td class="mono t">95</td><td class="mono r">none</td><td class="mono r">partial</td><td class="mono k">feedback</td></tr>
+      <tr><td class="wk">5</td><td>Second book, structure, bubbles</td><td class="mono k">97</td><td class="mono k">95</td><td class="mono k">96</td><td class="mono t">95</td><td class="mono t">clean</td><td class="mono k">both books</td></tr>
+      <tr><td class="wk">6</td><td>Held-out proof, upload, print-ready</td><td class="mono t">98</td><td class="mono t">97</td><td class="mono k">97</td><td class="mono k">95</td><td class="mono k">clean</td><td class="mono k">upload</td></tr>
+      <tr><td class="wk">7</td><td>Remediation, deployed, handed over</td><td class="mono t">98</td><td class="mono t">97</td><td class="mono t">98</td><td class="mono t">95</td><td class="mono t">clean</td><td class="mono t">deployed</td></tr>
+    </tbody>
+  </table>
+
+  <div class="wash" style="margin-left:auto;margin-right:auto;max-width:640px;">
+    <h4>A note on the numbers</h4>
+    <p>The targets are set to be realistic rather than flattering. Week 1's character score is measured on the three A/B test pages, not a whole book, which is why it carries a star. Past the target the remaining calls are made by eye, which is why the final pass before delivery is a person reading the book rather than a score.</p>
+  </div>
+</div>
+
+<!-- ============ VII — WHERE THE WEEKS GO ============ -->
+<div class="section">
+  <div class="sec-num">VII</div>
+  <h2>Where the seven weeks go</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Fine-tuning takes the largest share, because character consistency is the keystone every later week reuses. The web app runs alongside so every Friday has something to click.</p>
+
+  <div class="flow">
+    <div class="flow-col">
+      <div class="flow-box b-blue"><div class="flow-hd">ABOUT ONE THIRD</div><p>fine-tunes the model and moves it into the pipeline, weeks 1 to 3 — the foundation every later week reuses</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-blue"><div class="flow-hd">ABOUT ONE FIFTH</div><p>builds the client web app in tiers across weeks 2 to 6 — view, then review, then generate</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-pink"><div class="flow-hd">ABOUT ONE QUARTER</div><p>rebuilds calm space and the words in week 4, then structure and bubbles in week 5</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-coral"><div class="flow-hd">ABOUT ONE EIGHTH</div><p>proves generality on an unseen manuscript and makes the files print-ready in week 6</p></div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box b-grey"><div class="flow-hd">THE FINAL WEEK</div><p>is remediation, deployment and the hand-over of everything we have made</p></div>
+    </div>
+
+    <div class="legend">
+      <div class="cell"><span class="sw" style="background:var(--blue)"></span><b>Blue</b><p>The two largest areas, which carry the most risk.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--pink)"></span><b>Pink</b><p>Rebuilding how the artwork and words are made.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--coral)"></span><b>Coral</b><p>Proof of generality and print-readiness.</p></div>
+      <div class="cell"><span class="sw" style="background:var(--grey)"></span><b>Grey</b><p>The closing week of deploy and hand-over.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VIII — WHAT COULD SLOW US DOWN ============ -->
+<div class="section">
+  <div class="sec-num">VIII</div>
+  <h2>What could slow us down</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Each of these is known in advance and has a planned response.</p>
+
+  <div class="grid2" style="gap:16px;">
+    <div class="risk"><h4>The fine-tune could overfit a thin dataset</h4><p class="sub">Too few or too similar training images and a character only reproduces one pose.</p><p class="resp"><b>Response.</b> Audit the set in week 1, build 15 to 25 varied images per character, and keep the compositing engine as a per-page fallback.</p></div>
+    <div class="risk"><h4>Training cost or time could run high</h4><p class="sub">Paying to train every character on fal.ai adds up if left unchecked.</p><p class="resp"><b>Response.</b> Train only recurring characters, batch runs, and track cost per character against the consistency it buys.</p></div>
+    <div class="risk"><h4>Two similar characters could collapse</h4><p class="sub">Look-alikes can blur into each other under one model.</p><p class="resp"><b>Response.</b> A unique trigger word per character, a paired reference for co-present look-alikes, and a scorecard check that they stay distinct.</p></div>
+    <div class="risk"><h4>The web design could arrive late or change</h4><p class="sub">Building against a design still in flux risks rework.</p><p class="resp"><b>Response.</b> The back end is design-agnostic and built read-only first against real data, so the design is skinned on top whenever it lands.</p></div>
+    <div class="risk"><h4>A full-book run could surface new faults</h4><p class="sub">A win on three pages may not hold across a whole book.</p><p class="resp"><b>Response.</b> Always A/B three pages first, and let the scorecard gate every full run before it reaches you.</p></div>
+    <div class="risk"><h4>Late fixes could undo earlier wins</h4><p class="sub">This has happened before, where a fix reopened a problem elsewhere.</p><p class="resp"><b>Response.</b> The full scorecard is rerun after every batch of fixes, and no measure may slip below its week-5 level.</p></div>
+  </div>
+</div>
+
+<!-- ============ IX — WHAT YOU OWN ============ -->
+<div class="section">
+  <div class="sec-num">IX</div>
+  <h2>What you own at the end</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">The engine and the app come first on purpose, because they are the product — the parts that keep paying on every title after these two. The books sit lower on the list because they are the proof, not the point.</p>
+
+  <div class="ownbox">
+    <ul class="ownlist">
+      <li><b>The general illustrator engine,</b> able to take any new manuscript and return a finished book with no per-book code changes and only light touch-up by hand.</li>
+      <li><b>The client web app, deployed,</b> to upload a manuscript, generate a book, browse pages, preview the PDF, inspect each character's look and leave feedback.</li>
+      <li><b>The fine-tune capability,</b> so any new cast — in these worlds or a brand-new one — can be trained into the model on demand, with the trained weights kept as reusable assets.</li>
+      <li><b>The independent scorecard,</b> so any future book can be measured rather than argued about, proven already on an unseen manuscript.</li>
+      <li><b>A short runbook</b> covering how to run the engine on the next title.</li>
+      <li>The two test books at their week-7 targets — no internal notes on any page, correct front and back matter, one consistent trim size — as the acceptance evidence.</li>
+      <li>Every caption readable, contrast-checked, clear of the centre fold and word for word to the manuscript.</li>
+      <li>Print files at print resolution and colour, with correct bleed and trim, signed off by you.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ X — MEETING RHYTHM ============ -->
+<div class="section">
+  <div class="sec-num">X</div>
+  <h2>The two meetings each week</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Two fixed touchpoints a week keep direction tight and surprises small. The specific thing shown at each meeting is listed under its week in section five.</p>
+
+  <div class="grid2">
+    <div class="need"><div class="k">EVERY MONDAY</div><div class="wk">Review &amp; kick</div><p>We review the weekend's progress and the scorecard, confirm the week's headline goal, and fold in anything from the previous Friday. Roughly thirty minutes.</p></div>
+    <div class="need"><div class="k">EVERY FRIDAY</div><div class="wk">Live demo</div><p>We show the week's outcome working — in the web app wherever possible, not as screenshots — and capture your notes straight into the feedback ledger. Roughly thirty to forty-five minutes.</p></div>
+  </div>
+
+  <div class="wash">
+    <h4>Where your input matters most</h4>
+    <p>Three Fridays carry the most weight: week 3, when the first full book is in the app; week 5, when both books are complete with structure and bubbles; and week 6, when you upload a manuscript and watch it generate. If a Monday or Friday must move, we hold the demo rather than skip it, so no week ever closes unseen.</p>
+  </div>
+
+  <p class="footnote">Read this as the build log for a general AI illustrator engine — a product that turns any manuscript into a print-ready book, run from a web app. The two books are the known-answer test harness that proves the engine, not the deliverable; generality is confirmed cold on an unseen third manuscript in week 6. Starting-point figures come from a page-by-page visual review of what the engine has produced so far, not from its own self-report. Every weekly finish line is measured by the independent scorecard built in week 1, which is deliberately able to disagree with the part of the engine that makes the artwork. Consistency is delivered by fine-tuning a model per character on fal.ai, with the layered-compositing engine kept as a per-page fallback.</p>
+</div>
+
+</body>
+</html>

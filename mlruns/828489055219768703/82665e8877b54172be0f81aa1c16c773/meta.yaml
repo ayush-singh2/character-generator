@@ -1,0 +1,14 @@
+artifact_uri: file:///home/lightningleapananlyics/Desktop/Projects/Image_generation/mlruns/828489055219768703/82665e8877b54172be0f81aa1c16c773/artifacts
+end_time: 1790228245630
+entry_point_name: ''
+experiment_id: '828489055219768703'
+lifecycle_stage: active
+run_id: 82665e8877b54172be0f81aa1c16c773
+run_name: v02_faint_blocking
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790228245589
+status: 3
+tags: []
+user_id: lightningleapananlyics

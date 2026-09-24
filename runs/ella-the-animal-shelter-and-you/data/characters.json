@@ -1,0 +1,726 @@
+{
+  "title": "Ella, the Animal Shelter, and YOU!",
+  "author": null,
+  "story_no": null,
+  "roster": [
+    {
+      "name": "Ella",
+      "aliases": [
+        "she"
+      ],
+      "weight": 100,
+      "tier": "main",
+      "kind": "individual",
+      "role": "A girl who loves dogs and volunteers at her local animal shelter in various ways.",
+      "visual_mentions": []
+    },
+    {
+      "name": "Shelter dog",
+      "aliases": [
+        "shelter dogs",
+        "the dogs",
+        "a shelter dog"
+      ],
+      "weight": 85,
+      "tier": "main",
+      "kind": "representative",
+      "role": "Dogs living at the animal shelter that Ella volunteers with and helps find homes.",
+      "visual_mentions": [
+        "Small dogs, big dogs",
+        "Fluffy dogs, short-haired dogs",
+        "Puppies and seniors",
+        "Purebreds and mixed breeds",
+        "Dogs with big bushy tails and dogs with little stubby tails",
+        "Dogs with floppy ears and dogs with pointy ears",
+        "Poodles, boxers, corgis, labs, dachshunds, huskies, beagles, Dobermans, terriers, dalmatians, bulldogs, pugs"
+      ]
+    },
+    {
+      "name": "Ella's family member",
+      "aliases": [
+        "her family"
+      ],
+      "weight": 40,
+      "tier": "supporting",
+      "kind": "representative",
+      "role": "Family members who accompany Ella on Doggie Day Out activities with shelter dogs.",
+      "visual_mentions": []
+    },
+    {
+      "name": "Adoption event visitor",
+      "aliases": [
+        "people"
+      ],
+      "weight": 35,
+      "tier": "supporting",
+      "kind": "representative",
+      "role": "People who attend adoption events where Ella tells them about the dogs and shows off their tricks.",
+      "visual_mentions": []
+    },
+    {
+      "name": "Coffee shop worker",
+      "aliases": [],
+      "weight": 25,
+      "tier": "minor",
+      "kind": "representative",
+      "role": "Staff at the coffee shop where Ella gets pup cups during Doggie Day Out.",
+      "visual_mentions": []
+    },
+    {
+      "name": "Second shelter dog",
+      "aliases": [],
+      "weight": 30,
+      "tier": "supporting",
+      "kind": "representative",
+      "role": "Another distinct shelter dog to show variety in breeds and appearances at the shelter.",
+      "visual_mentions": [
+        "Different breed characteristics from the variety mentioned: small/big, fluffy/short-haired, floppy/pointy ears, bushy/stubby tails"
+      ]
+    }
+  ],
+  "bible": [
+    {
+      "name": "Ella",
+      "tier": "main",
+      "species": "human",
+      "age_appearance": "10 years old",
+      "gender": "female",
+      "height_build": "average height for age, slender athletic build",
+      "skin_tone": "light peachy tone",
+      "hair": "warm chestnut brown, shoulder-length with soft waves, often pulled back in a practical ponytail",
+      "eyes": "bright hazel with green flecks, large and expressive, upturned shape",
+      "face": "round youthful face, small button nose, warm friendly smile, soft features with rosy cheeks",
+      "distinguishing_features": [
+        "small freckles across nose and cheeks",
+        "always has an enthusiastic, caring expression",
+        "animated eyebrows"
+      ],
+      "default_outfit": {
+        "description": "Comfortable volunteer outfit: purple short-sleeve t-shirt with small paw print logo on chest, denim shorts with rolled cuffs, white sneakers with pink laces, white ankle socks",
+        "colors": [
+          "purple",
+          "denim blue",
+          "white",  
+          "pink"
+        ]
+      },
+      "accessories": [
+        "simple purple fabric headband",
+        "digital watch with colorful strap"
+      ],
+      "color_palette": [
+        "#8B5FBF",
+        "#4A90E2",
+        "#F5A9B8",
+        "#FFFFFF",
+        "#8B4513"
+      ],
+      "art_style_notes": "Bright, optimistic shoujo-adjacent style with large expressive eyes, energetic poses, and warm color tones. Clean linework with soft shading.",
+      "inferred": [
+        "age_appearance",
+        "gender",
+        "height_build",
+        "skin_tone",
+        "hair",
+        "eyes",
+        "face",
+        "distinguishing_features",
+        "default_outfit",
+        "accessories",
+        "color_palette"
+      ],
+      "flux_reference_prompt": "Anime character reference sheet, 10-year-old girl named Ella, chestnut brown shoulder-length wavy hair in ponytail, bright hazel eyes with green flecks, round friendly face with freckles across nose, light peachy skin tone, wearing purple t-shirt with paw print, denim shorts, white sneakers, purple headband, warm enthusiastic smile, full body front view, neutral standing pose, plain white background, clean anime art style, character turnaround",
+      "locked_spec": {
+        "identity": {
+          "species": "human",
+          "age_years": 9,
+          "gender_presentation": "female",
+          "skin": {
+            "hex": "#F4C6A8",
+            "undertone": "warm peach",
+            "notes": "freckles across nose and cheeks"
+          },
+          "build": {
+            "height_cm": 135,
+            "body_type": "slim child proportions with slightly large ears"
+          }
+        },
+        "hair": {
+          "color_hex": "#A0522D",
+          "length": "mid-back",
+          "style": "ponytail with side-swept bangs",
+          "texture": "wavy with volume",
+          "accessory": {
+            "item": "headband",
+            "color_hex": "#8B6BA8"
+          }
+        },
+        "face": {
+          "eye_color_hex": "#6B8E5F",
+          "eye_shape": "large round with prominent highlights",
+          "eyebrows": "medium brown arched",
+          "nose": "small button with pink blush",
+          "wrinkles": "none",
+          "distinguishing": [
+            "freckles across nose bridge and cheeks",
+            "rosy cheek blush",
+            "prominent ears"
+          ]
+        },
+        "outfit": {
+          "top": {
+            "garment": "short-sleeve t-shirt",
+            "color_hex": "#9B7BB5",
+            "fit": "relaxed casual",
+            "logo": {
+              "present": true,
+              "motif": "black paw print",
+              "position": "left chest",
+              "coords_pct": [
+                20,
+                35
+              ],
+              "size_pct": 8,
+              "color_hex": "#000000"
+            }
+          },
+          "bottom": {
+            "garment": "denim shorts with rolled cuffs",
+            "color_hex": "#5B7C99",
+            "fit": "relaxed with double-rolled hem"
+          },
+          "footwear": {
+            "garment": "low-top sneakers",
+            "color_hex": "#E8DCC8",
+            "sole_hex": "#F5F0E8",
+            "fastening": "purple laces",
+            "logo": "none"
+          },
+          "outerwear": "none"
+        },
+        "accessories": [
+          {
+            "item": "smartwatch on left wrist",
+            "color_hex": "#6B7BA8",
+            "details": "pink/magenta screen display"
+          },
+          {
+            "item": "white ankle socks",
+            "color_hex": "#FFFFFF"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shelter dog",
+      "tier": "main",
+      "species": "dog",
+      "age_appearance": "young adult dog, approximately 2 years old",
+      "gender": "male",
+      "height_build": "medium-sized mixed breed, sturdy build, approximately 45 pounds",
+      "skin_tone": "N/A",
+      "hair": "short-haired coat, tan and white coloring with tan patches over back and head, white chest and paws, smooth texture",
+      "eyes": "warm brown, large and soulful, round shape",
+      "face": "mixed breed features with slightly floppy ears that stand halfway up, gentle muzzle, black nose, friendly open-mouth expression with tongue out",
+      "distinguishing_features": [
+        "one ear flops more than the other",
+        "white blaze down center of face",
+        "expressive eyebrows",
+        "wagging tail with white tip"
+      ],
+      "default_outfit": {
+        "description": "simple blue nylon collar with metal tag",
+        "colors": [
+          "blue",
+          "silver"
+        ]
+      },
+      "accessories": [
+        "metal ID tag on collar"
+      ],
+      "color_palette": [
+        "#D4A574",
+        "#FFFFFF",
+        "#4A90E2",
+        "#8B4513",
+        "#000000"
+      ],
+      "art_style_notes": "Warm, appealing anime animal design with slightly anthropomorphized expressions but realistic proportions. Soft fur texture with clean highlights, expressive eyes that convey emotion.",
+      "inferred": [
+        "age_appearance",
+        "gender",
+        "height_build",
+        "hair",
+        "eyes",
+        "face",
+        "distinguishing_features",
+        "default_outfit",
+        "accessories",
+        "color_palette"
+      ],
+      "flux_reference_prompt": "Anime dog character reference sheet, medium-sized mixed breed dog, tan and white short fur, tan patches on back and head, white chest and paws, warm brown eyes, semi-floppy ears, one ear flops more, white blaze on face, friendly expression with tongue out, blue collar with tag, full body side view and front view, neutral standing pose, plain white background, clean anime animal art style, character turnaround",
+      "locked_spec": {
+        "identity": {
+          "species": "dog",
+          "age_years": 2,
+          "gender_presentation": "male",
+          "skin": {
+            "hex": "#000000",
+            "undertone": "black",
+            "notes": "black nose and paw pads"
+          },
+          "build": {
+            "height_cm": 50,
+            "body_type": "athletic medium-sized dog with lean muscular build"
+          }
+        },
+        "hair": {
+          "color_hex": "#D4843E",
+          "length": "short",
+          "style": "bicolor coat pattern with orange-tan body and white markings",
+          "texture": "smooth short fur",
+          "accessory": {
+            "item": "white blaze stripe on forehead from nose to crown between eyes",
+            "color_hex": "#FFFFFF"
+          }
+        },
+        "face": {
+          "eye_color_hex": "#6B3E1F",
+          "eye_shape": "large round expressive eyes",
+          "eyebrows": "orange-tan fur above eyes with darker shading",
+          "nose": "black triangular nose",
+          "wrinkles": "none",
+          "distinguishing": [
+            "white blaze stripe from nose to forehead",
+            "white muzzle",
+            "black whisker dots on muzzle",
+            "pink tongue visible when mouth open",
+            "floppy triangular ears with pink inner ear visible"
+          ]
+        },
+        "outfit": {
+          "top": {
+            "garment": "blue collar with buckle and circular tag",
+            "color_hex": "#2B5FA6",
+            "fit": "snug around neck",
+            "logo": {
+              "present": true,
+              "motif": "white Y symbol on circular blue tag",
+              "position": "center front of collar hanging from D-ring",
+              "coords_pct": [
+                50,
+                35
+              ],
+              "size_pct": 3,
+              "color_hex": "#FFFFFF"
+            }
+          },
+          "bottom": {
+            "garment": "none",
+            "color_hex": "#000000",
+            "fit": "none"
+          },
+          "footwear": {
+            "garment": "none",
+            "color_hex": "#FFFFFF",
+            "sole_hex": "#B8B8B8",
+            "fastening": "none",
+            "logo": "none"
+          },
+          "outerwear": "none"
+        },
+        "accessories": [
+          {
+            "item": "circular metal tag with Y logo",
+            "color_hex": "#2B5FA6",
+            "position": "hanging from collar at chest center"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Ella's family member",
+      "tier": "supporting",
+      "species": "human",
+      "age_appearance": "mid-30s adult woman",
+      "gender": "female",
+      "height_build": "average height, medium build, approximately 5'6\"",
+      "skin_tone": "light peachy tone, similar to Ella",
+      "hair": "chestnut brown like Ella's but longer, wavy hair to mid-back, often worn loose or in casual braid",
+      "eyes": "warm brown, almond-shaped, kind expression",
+      "face": "oval face with soft mature features, gentle smile lines, resembles Ella with more mature bone structure",
+      "distinguishing_features": [
+        "warm maternal expression",
+        "laugh lines around eyes",
+        "similar facial structure to Ella suggesting mother"
+      ],
+      "default_outfit": {
+        "description": "Casual weekend outfit: sage green cotton cardigan over white tank top, comfortable khaki pants, brown walking shoes, practical and comfortable for outdoor activities",
+        "colors": [
+          "sage green",
+          "white",
+          "khaki",
+          "brown"
+        ]
+      },
+      "accessories": [
+        "simple stud earrings",
+        "crossbody canvas bag",
+        "sunglasses on head"
+      ],
+      "color_palette": [
+        "#9CAF88",
+        "#FFFFFF",
+        "#C8B896",
+        "#8B6F47",
+        "#D4A574"
+      ],
+      "art_style_notes": "Warm, approachable adult character design in slice-of-life anime style. Softer features than shoujo but still expressive, realistic proportions with gentle color palette.",
+      "inferred": [
+        "age_appearance",
+        "gender",
+        "height_build",
+        "skin_tone",
+        "hair",
+        "eyes",
+        "face",
+        "distinguishing_features",
+        "default_outfit",
+        "accessories",
+        "color_palette"
+      ],
+      "flux_reference_prompt": "Anime character reference sheet, mid-30s woman, chestnut brown wavy hair to mid-back, warm brown almond-shaped eyes, oval face with gentle features, light peachy skin tone, wearing sage green cardigan over white tank top, khaki pants, brown shoes, kind maternal expression, full body front view, neutral standing pose, plain white background, slice-of-life anime art style, character turnaround",
+      "locked_spec": {
+        "identity": {
+          "species": "human",
+          "age_years": 16,
+          "gender_presentation": "feminine",
+          "skin": {
+            "hex": "#F4C4A0",
+            "undertone": "warm peachy",
+            "notes": "freckles across nose and cheeks"
+          },
+          "build": {
+            "height_cm": 163,
+            "body_type": "slender athletic"
+          }
+        },
+        "hair": {
+          "color_hex": "#8B4513",
+          "length": "long to mid-back",
+          "style": "half-up with center braid down back, loose wavy lower half",
+          "texture": "wavy with volume",
+          "accessory": {
+            "item": "sunglasses",
+            "color_hex": "#4A4A4A"
+          }
+        },
+        "face": {
+          "eye_color_hex": "#6B8E4E",
+          "eye_shape": "large round expressive",
+          "eyebrows": "medium brown arched natural",
+          "nose": "small rounded button",
+          "wrinkles": "none",
+          "distinguishing": [
+            "freckles across nose and cheeks",
+            "warm friendly smile",
+            "sunglasses resting on top of head"
+          ]
+        },
+        "outfit": {
+          "top": {
+            "garment": "white crew neck t-shirt under sage green open cardigan with ribbed cuffs and hem",
+            "color_hex": "#8BA888",
+            "fit": "relaxed comfortable",
+            "logo": {
+              "present": false,
+              "motif": "",
+              "position": "",
+              "coords_pct": [
+                0,
+                0
+              ],
+              "size_pct": 0,
+              "color_hex": ""
+            }
+          },
+          "bottom": {
+            "garment": "khaki tan cargo pants with knee patches and rolled cuffs",
+            "color_hex": "#B8A seventeen",
+            "fit": "relaxed tapered with rolled hems"
+          },
+          "footwear": {
+            "garment": "brown leather hiking boots",
+            "color_hex": "#6B4423",
+            "sole_hex": "#5C3A1F",
+            "fastening": "laces",
+            "logo": "none"
+          },
+          "outerwear": "none"
+        },
+        "accessories": [
+          "brown leather crossbody satchel bag with buckle closure worn across body from left shoulder to right hip",
+          "small stud earrings"
+        ]
+      }
+    },
+    {
+      "name": "Adoption event visitor",
+      "tier": "supporting",
+      "species": "human",
+      "age_appearance": "late 20s adult man",
+      "gender": "male",
+      "height_build": "tall, approximately 6'0\", lean athletic build",
+      "skin_tone": "medium tan complexion",
+      "hair": "dark brown, short neat cut with slight wave, professional but casual style",
+      "eyes": "dark gray-blue, medium size, friendly and attentive",
+      "face": "angular jawline, straight nose, warm approachable smile, clean-shaven",
+      "distinguishing_features": [
+        "dimple on left cheek when smiling",
+        "expressive eyebrows",
+        "open friendly demeanor"
+      ],
+      "default_outfit": {
+        "description": "Casual weekend outfit: navy blue henley shirt with buttons, dark gray jeans, white canvas sneakers, relaxed but put-together look",
+        "colors": [
+          "navy blue",
+          "dark gray",
+          "white"
+        ]
+      },
+      "accessories": [
+        "simple watch with leather band",
+        "smartphone in hand"
+      ],
+      "color_palette": [
+        "#2C3E50",
+        "#566573",
+        "#FFFFFF",
+        "#D4A574",
+        "#4A90E2"
+      ],
+      "art_style_notes": "Clean modern anime style for young adult male, realistic proportions with subtle stylization. Approachable and friendly design suitable for community event setting.",
+      "inferred": [
+        "age_appearance",
+        "gender",
+        "height_build",
+        "skin_tone",
+        "hair",
+        "eyes",
+        "face",
+        "distinguishing_features",
+        "default_outfit",
+        "accessories",
+        "color_palette"
+      ],
+      "flux_reference_prompt": "Anime character reference sheet, late 20s man, dark brown short wavy hair, dark gray-blue eyes, angular face with friendly smile, medium tan skin tone, wearing navy blue henley shirt, dark gray jeans, white sneakers, approachable expression, full body front view, neutral standing pose, plain white background, modern anime art style, character turnaround",
+      "locked_spec": {
+        "identity": {
+          "species": "human",
+          "age_years": 28,
+          "gender_presentation": "masculine",
+          "skin": {
+            "hex": "#C8905A",
+            "undertone": "warm",
+            "notes": "tan complexion with warm orange-brown tones"
+          },
+          "build": {
+            "height_cm": 178,
+            "body_type": "athletic lean with defined musculature"
+          }
+        },
+        "hair": {
+          "color_hex": "#3D2817",
+          "length": "short",
+          "style": "swept up and back with textured volume on top",
+          "texture": "thick wavy",
+          "accessory": {
+            "item": "none",
+            "color_hex": "#000000"
+          }
+        },
+        "face": {
+          "eye_color_hex": "#2B9B9E",
+          "eye_shape": "large rounded with prominent upper lid",
+          "eyebrows": "thick dark straight with natural arch",
+          "nose": "straight medium width with rounded tip",
+          "wrinkles": "none",
+          "distinguishing": [
+            "broad friendly smile showing teeth",
+            "strong defined jawline",
+            "prominent ears"
+          ]
+        },
+        "outfit": {
+          "top": {
+            "garment": "short sleeve henley shirt",
+            "color_hex": "#4A5A6F",
+            "fit": "fitted",
+            "logo": {
+              "present": false,
+              "motif": "",
+              "position": "",
+              "coords_pct": [
+                0,
+                0
+              ],
+              "size_pct": 0,
+              "color_hex": "#000000"
+            }
+          },
+          "bottom": {
+            "garment": "slim fit jeans",
+            "color_hex": "#5A5550",
+            "fit": "slim tapered"
+          },
+          "footwear": {
+            "garment": "low top sneakers",
+            "color_hex": "#E8D5D0",
+            "sole_hex": "#D4C4BE",
+            "fastening": "laces",
+            "logo": "none"
+          },
+          "outerwear": "none"
+        },
+        "accessories": [
+          "analog wristwatch with white face and dark brown leather strap on left wrist",
+          "black smartphone held in right hand"
+        ]
+      }
+    },
+    {
+      "name": "Coffee shop worker",
+      "tier": "minor",
+      "species": "human",
+      "age_appearance": "early 20s young adult woman",
+      "gender": "female",
+      "height_build": "petite, approximately 5'3\", slim build",
+      "skin_tone": "light olive complexion",
+      "hair": "black hair in high messy bun with loose strands framing face, casual trendy style",
+      "eyes": "dark brown, large and bright, slightly upturned",
+      "face": "heart-shaped face, small nose, cheerful smile, youthful features",
+      "distinguishing_features": [
+        "small nose piercing stud",
+        "energetic friendly expression",
+        "paint-like coffee stain on apron"
+      ],
+      "default_outfit": {
+        "description": "Coffee shop uniform: forest green apron with coffee shop logo over burgundy long-sleeve shirt, black skinny jeans, black non-slip shoes, name tag pinned to apron",
+        "colors": [
+          "forest green",
+          "burgundy",
+          "black"
+        ]
+      },
+      "accessories": [
+        "small hoop earrings",
+        "simple chain necklace",
+        "black wristwatch"
+      ],
+      "color_palette": [
+        "#2D5016",
+        "#800020",
+        "#000000",
+        "#D4A574",
+        "#FFFFFF"
+      ],
+      "art_style_notes": "Energetic modern anime style with trendy casual aesthetic. Bright expressive features suitable for service industry character, clean linework with contemporary fashion sense.",
+      "inferred": [
+        "age_appearance",
+        "gender",
+        "height_build",
+        "skin_tone",
+        "hair",
+        "eyes",
+        "face",
+        "distinguishing_features",
+        "default_outfit",
+        "accessories",
+        "color_palette"
+      ],
+      "flux_reference_prompt": "Anime character reference sheet, early 20s woman, black hair in high messy bun, dark brown upturned eyes, heart-shaped face with cheerful smile, light olive skin tone, wearing forest green apron over burgundy shirt, black jeans, small nose piercing, energetic friendly expression, full body front view, neutral standing pose, plain white background, modern anime art style, character turnaround",
+      "locked_spec": {
+        "identity": {
+          "species": "human",
+          "age_years": 24,
+          "gender_presentation": "feminine",
+          "skin": {
+            "hex": "#D4A574",
+            "undertone": "warm",
+            "notes": "smooth with freckles across nose and cheeks"
+          },
+          "build": {
+            "height_cm": 160,
+            "body_type": "petite with slight curves"
+          }
+        },
+        "hair": {
+          "color_hex": "#1A1614",
+          "length": "long",
+          "style": "high bun with loose strands framing face",
+          "texture": "straight with slight wave",
+          "accessory": {
+            "item": "none",
+            "color_hex": "#000000"
+          }
+        },
+        "face": {
+          "eye_color_hex": "#4A3425",
+          "eye_shape": "large round with thick lashes",
+          "eyebrows": "thick dark arched",
+          "nose": "small rounded with freckles",
+          "wrinkles": "none",
+          "distinguishing": [
+            "freckles across nose and cheeks",
+            "gold hoop earrings in both ears"
+          ]
+        },
+        "outfit": {
+          "top": {
+            "garment": "long-sleeve collared shirt",
+            "color_hex": "#6B3E52",
+            "fit": "fitted with rolled three-quarter sleeves",
+            "logo": {
+              "present": false,
+              "motif": "",
+              "position": "",
+              "coords_pct": [
+                0,
+                0
+              ],
+              "size_pct": 0,
+              "color_hex": "#000000"
+            }
+          },
+          "bottom": {
+            "garment": "skinny jeans",
+            "color_hex": "#2B2B2B",
+            "fit": "tight fitted"
+          },
+          "footwear": {
+            "garment": "lace-up oxford shoes",
+            "color_hex": "#1C1C1C",
+            "sole_hex": "#3A3A3A",
+            "fastening": "laces",
+            "logo": "none"
+          },
+          "outerwear": "none"
+        },
+        "accessories": [
+          {
+            "item": "apron with cross-back straps",
+            "color_hex": "#5A7A5E",
+            "material": "canvas fabric",
+            "details": "front kangaroo pocket, coffee stain on lower front, rectangular name tag reading 'Mia' on upper left chest at coords_pct [20, 25] size_pct 8, coffee cup icon with text 'coffee' centered at coords_pct [50, 40] size_pct 12 in color #3A4A3C, tied waist straps at back"
+          },
+          {
+            "item": "gold hoop earrings",
+            "color_hex": "#D4AF37",
+            "material": "metal",
+            "details": "medium-sized hoops in both ears"
+          }
+        ]
+      }
+    }
+  ]
+}

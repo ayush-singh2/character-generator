@@ -156,9 +156,21 @@ def _garment(g: dict, kind: str) -> str | None:
 def _outfit(spec: dict) -> list[str]:
     o = spec.get("outfit") or {}
     out = []
-    for kind in ("top", "bottom", "footwear", "outerwear"):
-        seg = _garment(o.get(kind), kind) if isinstance(o.get(kind), dict) else None
-        if seg:
+    # headwear first — a hat/cap is often the key signature item (e.g. Bilbo's
+    # green cap vs Obi's blue cap) and must never be dropped from the lock.
+    # "collar"/"bandana"/"neckwear" carry dog signature items (e.g. the always-on
+    # baseball bandana) — omitting them made the sheet judge treat the bandana
+    # as an unauthorized item and reject every sheet that (correctly) wore it.
+    for kind in ("hat", "headwear", "cap", "collar", "bandana", "neckwear",
+                 "top", "bottom", "footwear", "outerwear"):
+        v = o.get(kind)
+        if isinstance(v, dict):
+            seg = _garment(v, kind)
+        elif isinstance(v, str) and v.strip() and v.strip().lower() != "none":
+            seg = v.strip()
+        else:
+            seg = None
+        if seg and seg not in out:
             out.append(seg)
     return out
 
@@ -207,6 +219,20 @@ def serialize(spec: dict, name: str = "") -> str:
         head.append(idn["gender_presentation"])
     if idn.get("species") and idn["species"] != "human":
         head.append(idn["species"])
+    # Stance lock (animals): the axis that actually flips between pages is
+    # anthro vs feral — a momentary pose (yoga, jumping) never changes it.
+    stance = idn.get("stance")
+    if isinstance(stance, dict):
+        when = f" ({stance['when']})" if stance.get("when") else ""
+        stance = str(stance.get("default", "")) + when
+    stance = str(stance or "").strip().lower()
+    if stance.startswith("feral"):
+        head.append("ALWAYS a natural four-legged animal — never standing "
+                    "upright like a person (a deliberate held pose is fine, "
+                    "but it never becomes a biped)")
+    elif stance.startswith("anthro"):
+        head.append("ALWAYS an upright, person-like biped — never dropping "
+                    "to all fours like a wild animal")
     build = idn.get("build") or {}
     if build.get("body_type"):
         head.append(build["body_type"] + " build")

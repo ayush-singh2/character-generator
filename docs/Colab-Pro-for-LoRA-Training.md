@@ -86,3 +86,4 @@ and avoids trying to make Colab a persistent host (which it is not).
 3. **Refactor `lora.py`** — let `train()` consume **externally-trained LoRA
    URLs** (skip fal training, keep fal inference).
 
+

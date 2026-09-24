@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Author Control — Answers</title>
+<style>
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Regular.ttf'); font-weight:400; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Medium.ttf'); font-weight:500; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-SemiBold.ttf'); font-weight:600; }
+@font-face { font-family:'Poppins'; src:url('_fonts/Poppins-Bold.ttf'); font-weight:700; }
+@font-face { font-family:'Lora'; src:url('_fonts/Lora.ttf'); font-weight:400 700; }
+
+:root{
+  --teal:#0e7c72;
+  --teal-line:#17a08f;
+  --teal-deep:#0c5d55;
+  --wash:#e9f6f2;
+  --wash-line:#bfe3da;
+  --ink:#20292b;
+  --muted:#7c8a8c;
+  --red:#c0392b;
+  --border:#e4eae9;
+  --blue:#7ecbe6;
+  --pink:#f6b8d2;
+  --coral:#f4a794;
+  --grey:#d9dede;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:'Lora',Georgia,serif;
+  color:var(--ink);
+  font-size:11.2pt;
+  line-height:1.5;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+@page{ size:Letter; margin:14mm 15mm; }
+
+h1,h2,h3,h4,.label,.sec-num,.pill,.flow-hd,.tab,.legend b,.stat-num,.stat-tgt,.wk-goal,table,.ownlist{
+  font-family:'Poppins',Arial,sans-serif;
+}
+
+/* ---------- section scaffolding ---------- */
+.section{ break-before:page; padding-top:6mm; }
+.section.tight{ padding-top:4mm; }
+.card,.fault,.stat,.risk,.need,.after,.qbox{ break-inside:avoid; }
+.sec-num{
+  text-align:center; color:var(--teal); font-weight:600;
+  letter-spacing:.5em; font-size:10pt; text-indent:.5em;
+  margin:0 0 6px;
+}
+h2{
+  text-align:center; font-weight:700; font-size:22pt; color:var(--ink);
+  margin:0 0 8px; letter-spacing:-.01em;
+}
+.rule-d{ width:64px; height:0; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 12px; }
+.rule-d::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.sec-intro{ text-align:center; color:var(--muted); max-width:560px; margin:0 auto 18px; font-size:11pt; line-height:1.5; }
+.contd{ text-align:center; color:var(--muted); font-family:'Poppins',sans-serif; letter-spacing:.18em; font-size:9pt; margin:0 0 20px; }
+
+/* ---------- cover ---------- */
+.cover{ height:calc(100vh - 40mm); display:flex; flex-direction:column; }
+.cover-mid{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+h1{ font-weight:700; font-size:46pt; margin:0 0 14px; letter-spacing:-.02em; }
+.cover-sub{ color:var(--ink); font-size:13pt; margin:0 0 14px; }
+.cover-rule{ width:64px; border-top:1.4px solid var(--teal-line); position:relative; margin:0 auto 26px; }
+.cover-rule::after{ content:''; position:absolute; left:50%; top:50%; width:5px; height:5px; background:var(--teal-line); transform:translate(-50%,-50%) rotate(45deg); }
+.cover-lead{ max-width:520px; color:var(--ink); font-size:12pt; line-height:1.6; }
+.cover-kicker{ font-family:'Poppins',sans-serif; letter-spacing:.32em; font-size:9pt; color:var(--teal); margin:0 0 22px; }
+.cover-foot{ display:flex; gap:0; border-top:1px solid var(--border); }
+.cover-foot .cell{ flex:1; text-align:center; padding:16px 20px; }
+.cover-foot .cell+.cell{ border-left:1px solid var(--border); }
+.cover-foot .k{ font-family:'Poppins',sans-serif; letter-spacing:.22em; font-size:8pt; color:var(--muted); }
+.cover-foot .v{ font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5pt; margin:6px 0 5px; }
+.cover-foot .s{ font-family:'Poppins',sans-serif; letter-spacing:.12em; font-size:8pt; color:var(--muted); }
+
+/* ---------- generic cards ---------- */
+.grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.card{ border:1px solid var(--border); border-radius:4px; padding:16px 16px 18px; }
+.card h4{ text-align:center; font-weight:600; font-size:11.5pt; margin:0 0 8px; }
+.card p{ text-align:center; color:var(--ink); font-size:9.6pt; line-height:1.5; margin:0; }
+.card .n{ text-align:center; font-family:'Poppins',sans-serif; font-weight:700; font-size:13pt; color:var(--teal); margin:0 0 4px; }
+
+/* ---------- callout wash box ---------- */
+.wash{ background:var(--wash); border-top:1.5px solid var(--teal-line); border-bottom:1.5px solid var(--teal-line); padding:20px 26px; margin-top:22px; break-inside:avoid; }
+.wash h4{ text-align:center; font-family:'Poppins',sans-serif; font-weight:600; font-size:12pt; margin:0 0 8px; }
+.wash p{ text-align:center; color:var(--ink); font-size:10pt; margin:0; line-height:1.55; }
+.worth-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 30px; }
+.worth b{ font-family:'Poppins',sans-serif; font-weight:600; font-size:10pt; }
+.worth-item{ border-left:2px solid var(--wash-line); padding-left:12px; }
+.worth-item p{ text-align:left; color:#4c5a5c; font-size:9.4pt; margin:3px 0 0; }
+.worth h4{ text-align:left; margin-bottom:14px; }
+
+/* ---------- the client's question, restated ---------- */
+.qbox{ border:1px solid var(--border); border-left:3px solid var(--teal); border-radius:3px; background:#fbfdfd; padding:12px 18px; margin:0 auto 16px; max-width:600px; }
+.qbox .k{ font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.16em; font-size:7.6pt; color:var(--teal-deep); margin-bottom:5px; }
+.qbox p{ margin:0; font-size:10pt; line-height:1.5; color:#33403f; font-style:italic; }
+
+/* ---------- answer prose ---------- */
+.prose{ max-width:640px; margin:0 auto; }
+.prose p{ margin:0 0 10px; font-size:10.4pt; line-height:1.6; }
+.prose b{ font-family:'Poppins',sans-serif; font-weight:600; }
+.lead{ font-size:11pt; }
+
+/* ---------- ordered step list ---------- */
+.steps{ border:1px solid var(--border); border-radius:4px; padding:6px 22px; max-width:640px; margin:14px auto 0; }
+.steps ol{ list-style:none; margin:0; padding:0; counter-reset:s; }
+.steps li{ position:relative; padding:12px 0 12px 40px; border-bottom:1px solid var(--border); font-size:10pt; line-height:1.5; }
+.steps li:last-child{ border-bottom:0; }
+.steps li::before{ counter-increment:s; content:counter(s); position:absolute; left:0; top:11px; width:24px; height:24px; background:var(--teal); color:#fff; border-radius:50%; font-family:'Poppins',sans-serif; font-weight:600; font-size:10pt; text-align:center; line-height:24px; }
+.steps b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+/* ---------- example / edit table ---------- */
+table{ width:100%; border-collapse:collapse; font-size:9.6pt; margin-top:6px; }
+thead th{ background:var(--wash); color:var(--teal-deep); font-weight:600; text-align:left; padding:8px 10px; border-bottom:2px solid var(--ink); font-size:9pt; }
+tbody td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+tbody td.say{ font-style:italic; color:var(--teal-deep); }
+.after-note{ text-align:center; color:var(--muted); font-size:8.8pt; margin-top:8px; }
+
+/* ---------- own list ---------- */
+.ownbox{ border:1px solid var(--border); border-radius:4px; padding:10px 26px; max-width:640px; margin:0 auto; }
+.ownlist{ list-style:none; margin:0; padding:0; }
+.ownlist li{ position:relative; padding:14px 0 14px 30px; border-bottom:1px solid var(--border); font-size:10pt; line-height:1.5; }
+.ownlist li:last-child{ border-bottom:0; }
+.ownlist li::before{ content:'\2713'; position:absolute; left:0; top:13px; color:var(--teal); font-weight:700; }
+.ownlist b{ font-family:'Poppins',sans-serif; font-weight:600; }
+
+.footnote{ color:var(--muted); font-size:8.8pt; line-height:1.55; text-align:center; max-width:600px; margin:26px auto 0; border-top:1px solid var(--border); padding-top:18px; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-mid">
+    <div class="cover-kicker">ILLUSTRATED&nbsp;·&nbsp;BOOK&nbsp;·&nbsp;STUDIO</div>
+    <h1>Your Book, Your Direction</h1>
+    <div class="cover-sub">How much the author decides — and how the tool works to it</div>
+    <div class="cover-rule"></div>
+    <p class="cover-lead">A plain answer to your four questions: what goes on each page, how style and fonts are chosen, how a finished spread is corrected, and where the limits are. In every case the author decides and the tool executes.</p>
+  </div>
+  <div class="cover-foot">
+    <div class="cell">
+      <div class="k">PREPARED FOR</div>
+      <div class="v">The Author</div>
+      <div class="s">CREATIVE CONTROL &amp; CAPABILITIES</div>
+    </div>
+    <div class="cell">
+      <div class="k">PREPARED BY</div>
+      <div class="v">The Development Team</div>
+      <div class="s">18 AUGUST 2026</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ I — CHOICE OVER EACH PAGE ============ -->
+<div class="section">
+  <div class="sec-num">I</div>
+  <h2>Choice over each page</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Full choice. The tool treats the manuscript as the story and your instructions as the direction — you can be as hands-off or as hands-on as you like, page by page.</p>
+
+  <div class="qbox">
+    <div class="k">YOU ASKED</div>
+    <p>How much choice does the author have over what's on each page? Will the tool just draw based on the manuscript, or will the author be able to provide specific instructions?</p>
+  </div>
+
+  <div class="grid3">
+    <div class="card"><div class="n">1</div><h4>Manuscript-driven</h4><p>Write nothing extra and you still get a complete, coherent book. The tool reads each scene and proposes an illustration for every page. The fastest path.</p></div>
+    <div class="card"><div class="n">2</div><h4>Per-page notes</h4><p>For any page, add a shot list in your own words — “wide shot, warm evening light, cat in the background.” Your note is treated as authoritative.</p></div>
+    <div class="card"><div class="n">3</div><h4>Design locked first</h4><p>You approve how each character looks before any page is drawn, so your choices carry through the whole book instead of drifting page to page.</p></div>
+  </div>
+
+  <div class="wash">
+    <h4>The author decides four things on every page</h4>
+    <p><b>What is on it &nbsp;·&nbsp; who is in it &nbsp;·&nbsp; how it is framed &nbsp;·&nbsp; what mood it carries</b><br>
+    — either by letting the story speak for itself, or by adding as much specific instruction as you want.</p>
+  </div>
+</div>
+
+<!-- ============ II — STYLE & FONT CHOICES ============ -->
+<div class="section">
+  <div class="sec-num">II</div>
+  <h2>Style, character &amp; font choices</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Yes to both. Illustration style, character look, and every text setting are author choices — made from clear samples and previews, not decided for you.</p>
+
+  <div class="qbox">
+    <div class="k">YOU ASKED</div>
+    <p>Will the author pick the illustration style from a set of samples? And the font, size, and placement of the text?</p>
+  </div>
+
+  <div class="grid3">
+    <div class="card"><h4>Illustration style</h4><p>Chosen from a set of samples — soft watercolour, bold flat colour, painterly storybook, line-and-wash. Once picked, it is applied consistently to the whole book.</p></div>
+    <div class="card"><h4>Character look</h4><p>Before the book is built, you approve each character's face, outfit, colours and signature items on a reference sheet. That approved look becomes the single source of truth.</p></div>
+    <div class="card"><h4>Fonts &amp; text</h4><p>Font from a curated, print-safe set; a comfortable, adjustable size; and placement into a calm area of the art so the words stay easy to read.</p></div>
+  </div>
+
+  <div class="wash">
+    <h4>The character is approved <i>before</i> the book is designed</h4>
+    <p>Want the cat orange, the dog in a green cap, or a character with freckles? That is decided and locked at this step — and then honoured on every page. This is what keeps a character looking like the same character throughout.</p>
+  </div>
+</div>
+
+<!-- ============ III — CORRECTIONS AFTER SPREADS ============ -->
+<div class="section">
+  <div class="sec-num">III</div>
+  <h2>Corrections after a spread exists</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">A core feature, not an afterthought. Once a page is illustrated you can request a specific change with a simple instruction — and only that change is applied, with everything else kept as it was.</p>
+
+  <div class="qbox">
+    <div class="k">YOU ASKED</div>
+    <p>How will edits work after spreads are created? Say the author wants a hat on the character, or the cat to be orange, or a jump rope added — can they make those updates and keep everything else as is?</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">You want…</th><th style="width:32%">You say…</th><th>What happens</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>A hat on the character</td><td class="say">“Add a red hat to Ella.”</td><td>The hat is added; her face, pose, outfit and the whole scene stay the same.</td></tr>
+      <tr><td>The cat to be orange</td><td class="say">“Make the cat orange.”</td><td>Only the cat's colour changes; everything else is untouched.</td></tr>
+      <tr><td>A jump rope in the scene</td><td class="say">“Put a jump rope in her hands.”</td><td>The prop is introduced into the existing scene — no redraw from scratch.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><h4>Targeted, not a redo</h4><p>Edits are applied on top of the existing art, so the parts you already approved are preserved. You refine, not restart.</p></div>
+    <div class="card"><h4>Page by page</h4><p>A change to one page never affects another. Iterate on a single spread until it is exactly right.</p></div>
+    <div class="card"><h4>Consistency-aware</h4><p>If a change should carry through — the character now always wears the hat — it can be pushed into the locked look so every page agrees.</p></div>
+  </div>
+</div>
+
+<!-- ============ IV — LIMITS, THROUGHPUT & UPKEEP ============ -->
+<div class="section">
+  <div class="sec-num">IV</div>
+  <h2>Limits, throughput &amp; upkeep</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">Straight answers on what the tool is and isn't, so expectations are clear from the start.</p>
+
+  <div class="qbox">
+    <div class="k">YOU ASKED</div>
+    <p>Any limitations on the final tool? How many books can we create a month, and how much upkeep will be required?</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h4>How many books a month?</h4><p><b>No fixed cap.</b> A working author can comfortably produce several books a month — more in batches. Throughput is set by your review time and the per-image cost, not by the software.</p></div>
+    <div class="card"><h4>How much upkeep?</h4><p><b>Minimal for you.</b> You supply a manuscript, make choices, review pages. Keeping services current and adding new styles or fonts is handled on the development side. No server to run between books.</p></div>
+  </div>
+
+  <div class="wash">
+    <h4>Honest limitations</h4>
+    <div class="worth-grid">
+      <div class="worth-item"><b>Directed, not perfect first try.</b><p>A page occasionally needs one correction pass to land exactly right — which is what the per-page edit loop is for.</p></div>
+      <div class="worth-item"><b>Consistency is supervised.</b><p>Characters are held identical by design; you approve the look up front so the whole book stays true to it.</p></div>
+      <div class="worth-item"><b>Throughput follows budget.</b><p>Each illustration is billed per image. Volume scales with review capacity and image spend, not a hidden limit.</p></div>
+      <div class="worth-item"><b>Unusual requests take a pass more.</b><p>Nothing is off-limits; some highly specific asks simply need one extra round.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ V — HOW A PROJECT RUNS ============ -->
+<div class="section">
+  <div class="sec-num">V</div>
+  <h2>How a project runs, end to end</h2>
+  <div class="rule-d"></div>
+  <p class="sec-intro">The four answers, put together. At every step marked “you,” the decision is yours; the tool's job is to execute it quickly, consistently, and to a print-ready standard.</p>
+
+  <div class="steps">
+    <ol>
+      <li><b>You provide the manuscript</b> — with any per-page illustration notes you want to add.</li>
+      <li><b>You choose the illustration style</b> from a set of samples.</li>
+      <li><b>You approve each character's look</b> on a reference sheet — locked before the book is drawn.</li>
+      <li><b>The tool illustrates every page</b>, holding characters consistent and placing readable text in your chosen font.</li>
+      <li><b>You review and request per-page corrections</b> — a hat here, an orange cat there — until each page is right.</li>
+      <li><b>The tool assembles the print-ready PDF</b> at one uniform, professional trim size.</li>
+    </ol>
+  </div>
+
+  <div class="wash">
+    <h4>In one line</h4>
+    <p>You stay the author. The tool does the drawing and the production work under your direction — and lets you change your mind, one page at a time, right up to the finished book.</p>
+  </div>
+
+  <p class="footnote">We're glad to walk through any of this live, or to run a short sample — one or two of your pages, in a style of your choosing — so you can see the control and the correction loop first-hand.</p>
+</div>
+
+</body>
+</html>

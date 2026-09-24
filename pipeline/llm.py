@@ -11,6 +11,7 @@ import base64
 import json
 import os
 import re
+import threading
 import time
 
 import requests
@@ -21,16 +22,68 @@ load_dotenv()
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 TEXT_MODEL = os.getenv("TEXT_MODEL", "anthropic/claude-sonnet-4.5")
 # Vision-capable model for looking at generated art (text placement, QA).
+# NOTE: this must stay a real vision model. Text-only reasoning models (e.g.
+# Kimi K2.6) are blind on OpenRouter and will silently rubber-stamp the audit.
 VISION_MODEL = os.getenv("VISION_MODEL", "anthropic/claude-sonnet-4.5")
+
+# Reasoning models (Kimi K2.6 and friends) otherwise spend the whole token
+# budget in a `reasoning` field and return empty `content` — which our JSON
+# parser can't read. For these we disable reasoning and force OpenRouter to
+# route ONLY to providers that honour that flag (some ignore it and dump
+# reasoning anyway). See learning_doc/2026-09-22-model-ab-harness-and-kimi-swap.
+# Comma-separated substrings matched against the resolved model id.
+_TAME_REASONING = [s.strip().lower() for s in
+                   os.getenv("TAME_REASONING_MODELS", "kimi,moonshot,deepseek-r").split(",")
+                   if s.strip()]
+
+
+def _tame_reasoning(body: dict) -> None:
+    """If the request targets a reasoning model, disable its reasoning dump and
+    pin routing to providers that support that parameter. Mutates `body` in
+    place; never overrides fields a caller set explicitly."""
+    model = (body.get("model") or "").lower()
+    if not any(sub in model for sub in _TAME_REASONING):
+        return
+    body.setdefault("reasoning", {"enabled": False})
+    prov = body.setdefault("provider", {})
+    prov.setdefault("require_parameters", True)
 
 # Network resiliency: transient hiccups (dropped connections, rate limits,
 # 5xx) are retried with backoff rather than crashing the caller.
 MAX_RETRIES = 4
+CONNECT_TIMEOUT = float(os.getenv("LLM_CONNECT_TIMEOUT", "15"))
+READ_TIMEOUT = float(os.getenv("LLM_READ_TIMEOUT", "120"))
+# Hard wall-clock cap per request. A per-read timeout can't stop a server that
+# trickles bytes under the gap (this once stalled a run ~110 min); a daemon
+# worker joined with the deadline guarantees the call returns or fails.
+HARD_DEADLINE = float(os.getenv("LLM_HARD_DEADLINE", "240"))
 RETRYABLE = (
     requests.exceptions.ChunkedEncodingError,
     requests.exceptions.ConnectionError,
     requests.exceptions.Timeout,
 )
+
+
+def _post_deadline(url, headers, body):
+    """POST in a daemon worker joined with HARD_DEADLINE; return the Response, or
+    raise Timeout if the whole request+read overruns (abandoning the worker)."""
+    box = {}
+
+    def _work():
+        try:
+            box["resp"] = requests.post(url, headers=headers, json=body,
+                                        timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+        except Exception as e:                          # noqa: BLE001 — surfaced below
+            box["err"] = e
+
+    th = threading.Thread(target=_work, daemon=True)
+    th.start()
+    th.join(HARD_DEADLINE)
+    if th.is_alive():
+        raise requests.exceptions.Timeout(f"hard deadline {HARD_DEADLINE:.0f}s exceeded")
+    if "err" in box:
+        raise box["err"]
+    return box["resp"]
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
@@ -48,6 +101,7 @@ def _post_chat(body: dict) -> str:
     backoff. Raises RuntimeError once retries are exhausted or on a
     non-retryable non-200.
     """
+    _tame_reasoning(body)
     key = os.getenv("OPENROUTER_API_KEY")
     if not key:
         raise RuntimeError("OPENROUTER_API_KEY not set")
@@ -56,7 +110,7 @@ def _post_chat(body: dict) -> str:
     last_err = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            resp = requests.post(API_URL, headers=headers, json=body, timeout=180)
+            resp = _post_deadline(API_URL, headers, body)
             if resp.status_code == 429 or resp.status_code >= 500:
                 # Rate-limited or server error: back off and retry.
                 last_err = RuntimeError(f"OpenRouter {resp.status_code}: {resp.text[:200]}")
@@ -118,17 +172,34 @@ def chat_json_image(
     to read a generated illustration and report where a card may sit.
     Raises RuntimeError on a non-200, ValueError if the reply isn't JSON.
     """
-    data_url = f"data:{mime};base64,{base64.b64encode(image).decode()}"
+    return chat_json_images(system, user, [image], mime=mime, model=model,
+                            max_tokens=max_tokens, temperature=temperature)
+
+
+def chat_json_images(
+    system: str,
+    user: str,
+    images: list[bytes],
+    *,
+    mime: str = "image/png",
+    model: str | None = None,
+    max_tokens: int = 1500,
+    temperature: float = 0.2,
+) -> dict | list:
+    """Like `chat_json_image` but with several images in order (first = subject,
+    rest = references). Used by the identity judge to compare a page against the
+    character reference sheet(s) visually, not just against text."""
+    parts = [{"type": "text", "text": user}]
+    for b in images:
+        url = f"data:{mime};base64,{base64.b64encode(b).decode()}"
+        parts.append({"type": "image_url", "image_url": {"url": url}})
     content = _post_chat({
         "model": model or VISION_MODEL,
         "max_tokens": max_tokens,
         "temperature": temperature,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": [
-                {"type": "text", "text": user},
-                {"type": "image_url", "image_url": {"url": data_url}},
-            ]},
+            {"role": "user", "content": parts},
         ],
     })
     return _parse_json(content)

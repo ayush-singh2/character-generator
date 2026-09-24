@@ -1,0 +1,14 @@
+artifact_uri: file:///home/lightningleapananlyics/Desktop/Projects/Image_generation/mlruns/828489055219768703/140c7ee3476d433db6efa6928809c126/artifacts
+end_time: 1790228245545
+entry_point_name: ''
+experiment_id: '828489055219768703'
+lifecycle_stage: active
+run_id: 140c7ee3476d433db6efa6928809c126
+run_name: v00_original_gemini
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790228245506
+status: 3
+tags: []
+user_id: lightningleapananlyics

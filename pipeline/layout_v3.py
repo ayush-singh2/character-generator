@@ -15,12 +15,12 @@ SYSTEM = """\
 You are a picture-book art director. Given ONE scene (its illustration description \
 and the characters present), lay out the page in normalised coordinates.
 
-Coordinates: 0..1, origin top-left, x = right, y = down. For a two-page SPREAD \
-treat the whole thing as one wide 0..1 frame and keep main subjects clear of the \
-vertical centre (x≈0.5).
+Coordinates: 0..1, origin top-left, x = right, y = down. The page is a single \
+SQUARE page (1:1). Keep a calm top or bottom band as genuine in-scene negative \
+space (open sky, plain wall, calm ground) for the caption.
 
 Return ONLY JSON:
-{"empty_side":"left|right|top|bottom","text_zone":[x0,y0,x1,y1],
+{"empty_side":"top|bottom","text_zone":[x0,y0,x1,y1],
  "chars":[{"name":"","box":[x0,y0,x1,y1],"note":"pose/action"}],
  "composition":"one sentence"}
 Rules: boxes must not cover text_zone; size by importance/action; every listed \

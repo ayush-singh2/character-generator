@@ -1,0 +1,14 @@
+artifact_uri: file:///home/lightningleapananlyics/Desktop/Projects/Image_generation/mlruns/828489055219768703/c27a24d1e7eb4231bc1af70547309f90/artifacts
+end_time: 1790228245893
+entry_point_name: ''
+experiment_id: '828489055219768703'
+lifecycle_stage: active
+run_id: c27a24d1e7eb4231bc1af70547309f90
+run_name: v07_harmonize_img2img_sweep
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790228245844
+status: 3
+tags: []
+user_id: lightningleapananlyics

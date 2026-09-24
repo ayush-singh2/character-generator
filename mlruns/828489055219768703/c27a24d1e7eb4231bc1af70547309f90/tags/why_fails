@@ -1,0 +1,1 @@
+Denoise<->identity tension: without an identity anchor, 'blend more' = 'drift more'. No strength both blends AND preserves identity.
