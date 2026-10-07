@@ -2,6 +2,7 @@ requests
 python-dotenv
 pdfplumber
 pillow
+numpy
 streamlit
 python-docx
 python-toon>=0.1.3

@@ -1,0 +1,58 @@
+# Keep the Docker build context small and secret-free. The image builds the SPA
+# from source (node stage) and installs Python deps fresh, so none of the heavy
+# local artifacts, caches, or confidential material need to be sent to the daemon.
+
+.git
+.gitignore
+
+# secrets — provided via Render env vars, never baked into the image
+.env
+**/.env
+**/.env.local
+.streamlit/secrets.toml
+
+# python caches / local venvs
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+.venv/
+venv/
+
+# node deps / prior build output (rebuilt inside the image)
+**/node_modules/
+frontend/frontend/blue-balloon/dist/
+frontend/frontend/blue-balloon/test-results/
+frontend/frontend/blue-balloon/playwright-report/
+
+# heavy generated / experiment artifacts
+books/
+output/
+runs/
+notebook_runs/
+mlruns/
+baseline/
+dist/
+dist_bundle_notebook.ipynb
+server/data/*.db
+server/data/*.db-*
+
+# confidential / copyrighted source material
+manuscript/
+Referance_book/
+Illustration_guide/
+CLIENT_DOC/
+Client_REVIEW/
+Frontend_DESIGN/
+data/reference_images/
+data/char_refs/
+
+# archives, docs scratch, os cruft
+.archive_books/
+.archive_anthology/
+.archive_manuscripts/
+.tokensave/
+*.zip
+*.log
+.DS_Store
+whitepaper_assets/
+*.pdf

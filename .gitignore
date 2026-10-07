@@ -2,6 +2,11 @@
 .env
 .streamlit/secrets.toml
 
+# runtime SQLite DB (lives on the Render persistent disk, never in git)
+server/data/app.db
+server/data/app.db-shm
+server/data/app.db-wal
+
 # python
 __pycache__/
 *.py[cod]
@@ -28,8 +33,20 @@ data/reference_images/
 *.log
 
 # heavy web app + scratch dirs (kept out of the pipeline repo)
-frontend/
+# Ignore the CONTENTS of frontend/ (not the dir itself) so we can re-include the
+# one SPA we deploy. A blanket "frontend/" would stop git descending at all and
+# make the negations below impossible.
+frontend/*
 baseline/
+# …except the deployed SPA source (built + served by the backend on Render).
+# Re-include each parent dir, then the app; node_modules/dist are handled by the
+# app's own frontend/frontend/blue-balloon/.gitignore once it's tracked.
+!frontend/frontend/
+frontend/frontend/*
+!frontend/frontend/blue-balloon/
+frontend/frontend/blue-balloon/node_modules/
+frontend/frontend/blue-balloon/dist/
+frontend/frontend/blue-balloon/test-results/
 
 # archives & tooling
 .archive_anthology/

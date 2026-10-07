@@ -1,0 +1,49 @@
+# Render Blueprint for the bb-illustrator web service.
+#
+# Single Docker web service: the image builds the Vite SPA and the FastAPI
+# backend serves both the API and the built SPA (see Dockerfile + server/app.py).
+# Secrets (sync: false) are NOT stored here — set them in the Render dashboard.
+#
+# NOTE: bb-illustrator already exists as a Python-runtime service. To adopt this
+# blueprint, either switch that service's Runtime to Docker in the dashboard, or
+# let Render reconcile it by name when the Blueprint is connected. Attach the
+# disk and fill the sync:false secrets once, in the dashboard.
+services:
+  - type: web
+    name: bb-illustrator
+    runtime: docker
+    repo: https://github.com/ayush-singh2/character-generator
+    branch: main
+    dockerfilePath: ./Dockerfile
+    plan: standard
+    healthCheckPath: /
+    autoDeploy: true
+    disk:
+      name: bb-data
+      mountPath: /data        # persistent: SQLite DB + generated books survive deploys
+      sizeGB: 1
+    envVars:
+      - key: BB_STATE_DIR
+        value: /data
+      # --- secrets: set these in the Render dashboard, never commit values ---
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: FAL_KEY
+        sync: false
+      - key: APP_PASSWORD        # login password colleagues use
+        sync: false
+      - key: APP_SECRET          # session signing key
+        generateValue: true
+      # --- non-secret config (safe to version) ---
+      - key: EDIT_BACKEND
+        value: openrouter
+      - key: IMAGE_BACKEND
+        value: hybrid
+      - key: TEXT_MODEL
+        value: moonshotai/kimi-k2.6
+      - key: VISION_MODEL
+        value: anthropic/claude-sonnet-4.5
+      - key: EDIT_TEMPERATURE
+        value: "0.2"
+      - key: AUDIT_PREGATE
+        value: "on"

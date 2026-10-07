@@ -9,6 +9,7 @@ multi-user auth, which is out of the agreed scope. Everything under /api except
 
 import hashlib
 import hmac
+import json
 import os
 import re
 import shutil
@@ -18,14 +19,16 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from pipeline import plan_v3
-from server import db, jobs, pipeline_api
+from server import db, jobs, page_chat, pipeline_api
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Writable state (generated books + SQLite DB) lives under STATE_DIR. Locally it
 # defaults to the repo; in production point BB_STATE_DIR at a persistent disk
 # (e.g. /data on Render) so output survives restarts. NEVER the code dir (/app).
 STATE_DIR = os.environ.get("BB_STATE_DIR", REPO)
-DESIGN_DIR = os.path.join(REPO, "Frontend_DESIGN", "Blue Balloon Craftman Login")
+# The deployed UI is the Vite React SPA; we serve its production build (dist/).
+# Built locally by `npm run build` or in the Docker image's node stage.
+SPA_DIR = os.path.join(REPO, "frontend", "frontend", "blue-balloon", "dist")
 STATIC_DIR = os.path.join(REPO, "server", "static")
 BOOKS = os.path.join(STATE_DIR, "books")
 
@@ -504,6 +507,81 @@ async def api_correct_page(slug: str, page_id: str, request: Request,
             "url": f"/api/projects/{slug}/assets/pages/page_{page_id}.png?v={db.now_ms()}"}
 
 
+# --- Per-page correction CHAT (human-in-the-loop, server/page_chat.py) ------- #
+# A stateful, multi-turn version of /correct: the author says what's wrong and
+# can reference a correct page either by dropping its image (`refs` files) or by
+# naming it (`ref_pages`, or just "page 5" in the message, parsed server-side).
+
+def _page_url(slug, page_id):
+    # Point at the ART layer (text-free) when it exists — that's what the editor
+    # shows and what the chat edits — otherwise the baked page. ?v= cache-busts
+    # so the browser picks up the freshly-written revision.
+    art = os.path.join(pipeline_api.art_dir(slug), f"page_{page_id}.png")
+    kind = "art" if os.path.exists(art) else "pages"
+    return f"/api/projects/{slug}/assets/{kind}/page_{page_id}.png?v={db.now_ms()}"
+
+
+@app.get("/api/projects/{slug}/pages/{page_id}/chat")
+def api_chat_history(slug: str, page_id: str, _: bool = Depends(require_auth)):
+    _require_project(slug)
+    try:
+        sess = page_chat.get_session(slug, page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    return {"turns": sess.turns}
+
+
+@app.post("/api/projects/{slug}/pages/{page_id}/chat")
+async def api_chat_page(slug: str, page_id: str,
+                        message: str = Form(""),
+                        ref_pages: str = Form(""),
+                        area: str = Form(""),
+                        refs: list[UploadFile] = File(default=[]),
+                        _: bool = Depends(require_auth)):
+    _require_project(slug)
+    msg = (message or "").strip()
+    ref_page_ids = [x.strip() for x in (ref_pages or "").split(",") if x.strip()]
+    ref_images = [await f.read() for f in (refs or []) if f is not None]
+    if not msg and not ref_page_ids and not ref_images:
+        raise HTTPException(status_code=400, detail="message required")
+    # Optional selected region -> masked (surgical) edit. [x0,y0,x1,y1] in 0..1.
+    box = None
+    if area:
+        try:
+            b = json.loads(area)
+            if isinstance(b, list) and len(b) == 4:
+                box = [max(0.0, min(1.0, float(v))) for v in b]
+                if box[2] - box[0] < 0.02 or box[3] - box[1] < 0.02:
+                    box = None            # too small to mask meaningfully
+        except Exception:  # noqa: BLE001 — a malformed box just means full-page
+            box = None
+    try:
+        sess = page_chat.get_session(slug, page_id)
+        res = sess.send(msg, ref_pages=ref_page_ids, ref_images=ref_images, box=box)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e)[:300])
+    # A failed turn (e.g. a referenced page doesn't exist) is a normal 200 with a
+    # friendly reply the chat shows — not an HTTP error.
+    if res.get("ok") and res.get("page_url"):
+        res["page_url"] = _page_url(slug, page_id)
+    return res
+
+
+@app.post("/api/projects/{slug}/pages/{page_id}/chat/revert")
+async def api_chat_revert(slug: str, page_id: str, _: bool = Depends(require_auth)):
+    _require_project(slug)
+    try:
+        sess = page_chat.get_session(slug, page_id)
+        ok = sess.revert()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    if not ok:
+        raise HTTPException(status_code=409, detail="nothing to revert")
+    return {"ok": True, "page_url": _page_url(slug, page_id)}
+
+
 # --------------------------------------------------------------------------- #
 # Job status, assets, PDF
 # --------------------------------------------------------------------------- #
@@ -540,16 +618,25 @@ def api_pdf(slug: str, _: bool = Depends(require_auth)):
                         filename=os.path.basename(pdf))
 
 
-# Bare URL → the login page. Registered BEFORE the "/" static mount below so it
-# wins (the mount has no index.html and would otherwise 404 the root).
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/Login.html")
-
-
 # --------------------------------------------------------------------------- #
-# Static: shared api.js, then the design pages as a catch-all (html=True lets
-# /Login.html etc. resolve and keeps the _ds/ bundle + relative links working).
+# Static UI: the Vite React SPA build (dist/). Real files under dist/ are served
+# as-is; every other path falls back to index.html so client-side routes
+# (/home, /login, /projects/..., …) survive hard refresh and deep links.
+# Registered LAST so all /api/* routes above win; a stray /api/* path 404s here
+# instead of being handed the SPA shell.
 # --------------------------------------------------------------------------- #
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/", StaticFiles(directory=DESIGN_DIR, html=True), name="design")
+
+_SPA_INDEX = os.path.join(SPA_DIR, "index.html")
+
+
+@app.get("/{full_path:path}")
+async def spa(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="not found")
+    candidate = os.path.normpath(os.path.join(SPA_DIR, full_path))
+    # Serve a real built asset when it exists, guarding against path traversal
+    # that would escape dist/. Otherwise return the SPA shell.
+    if full_path and candidate.startswith(SPA_DIR + os.sep) and os.path.isfile(candidate):
+        return FileResponse(candidate)
+    return FileResponse(_SPA_INDEX)

@@ -23,7 +23,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from pipeline import editor, plan_v3, toon_io
+from pipeline import canon_rules, editor, generate_v7, items_v7, plan_v3, toon_io
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Books live under STATE_DIR (persistent disk in prod; repo locally).
@@ -179,6 +179,14 @@ def _page_id(fname):
     return fname[len("page_"):-len(".png")]
 
 
+# A real page id is "cover", a number, or a spread range like "6-7". The chat
+# feature writes sibling backups next to pages (page_15.preedit.png), which the
+# page_*.png glob would otherwise pick up as a phantom "15.preedit" page — and,
+# because pages are numbered by reading-order position in the UI, a phantom
+# would silently renumber every page after it. Keep only valid ids.
+_VALID_PAGE_ID = re.compile(r"^(?:cover|\d+(?:-\d+)?)$")
+
+
 def _page_order_key(pid):
     """Natural page order: cover first, then by leading page NUMBER (so 2 < 10,
     not the lexicographic 10 < 2 that scrambled the panel), named pages last."""
@@ -195,11 +203,89 @@ def list_pages(slug):
     if not os.path.isdir(d):
         return []
     files = glob.glob(os.path.join(d, "page_*.png"))
-    ids = sorted((_page_id(os.path.basename(p)) for p in files), key=_page_order_key)
-    return [{
-        "id": pid,
-        "url": f"/api/projects/{slug}/assets/pages/page_{pid}.png",
-    } for pid in ids]
+    ids = sorted((pid for p in files
+                  if _VALID_PAGE_ID.match(pid := _page_id(os.path.basename(p)))),
+                 key=_page_order_key)
+    texts = _page_texts(slug)
+    adir = art_dir(slug)
+    rows = []
+    for pid in ids:
+        t = texts.get(pid, {})
+        has_art = os.path.exists(os.path.join(adir, f"page_{pid}.png"))
+        rows.append({
+            "id": pid,
+            # Baked page (text burned in) — kept for the legacy/full-composite view.
+            "url": f"/api/projects/{slug}/assets/pages/page_{pid}.png",
+            # Text-free illustration — the editor's page background, so the words
+            # above it can be moved/edited. Falls back to the baked page.
+            "art_url": (f"/api/projects/{slug}/assets/art/page_{pid}.png"
+                        if has_art else f"/api/projects/{slug}/assets/pages/page_{pid}.png"),
+            "text": t.get("text", ""),
+            "text_area": t.get("text_area", ""),
+        })
+    return rows
+
+
+def _page_cast(slug, page_id):
+    """Character names present on a page (from scenes.toon). Used to give the
+    interactive chat a SHORT identity anchor instead of the full multi-KB locks
+    spec, which makes a one-line edit re-render the whole page. Best-effort []."""
+    try:
+        data = toon_io.load(os.path.join(data_dir(slug), "scenes.toon"))
+    except Exception:  # noqa: BLE001
+        return []
+    for sc in (data.get("scenes") or []) if isinstance(data, dict) else []:
+        if str(sc.get("page", "")).strip() == str(page_id):
+            return [str(c).strip() for c in (sc.get("chars") or []) if str(c).strip()]
+    return []
+
+
+def _page_texts(slug):
+    """Map page id -> {"text", "text_area"} from scenes.toon so the frontend can
+    lay each page's words out as an EDITABLE overlay (instead of the baked-in
+    copy). ``text_area`` is the pipeline's placement hint ("top"/"bottom"/
+    "center"). Best-effort — returns {} if the plan isn't present/parseable."""
+    try:
+        data = toon_io.load(os.path.join(data_dir(slug), "scenes.toon"))
+    except Exception:  # noqa: BLE001 — a missing/invalid plan just means no overlay text
+        return {}
+    out = {}
+    for sc in (data.get("scenes") or []) if isinstance(data, dict) else []:
+        pid = str(sc.get("page", "")).strip()
+        if pid:
+            out[pid] = {"text": (sc.get("text") or "").strip(),
+                        "text_area": (sc.get("text_area") or "").strip().lower()}
+    return out
+
+
+def _page_locks_context(slug, page_id):
+    """The page's LOCKS (cast/outfit/body-plan/size/setting) as preserve-context
+    for an i2i page correction — the same detailed spec the pipeline generates and
+    repairs against (pipeline/generate_v7._locks_context), so a manual correction
+    fixes toward the locked identities instead of a terse guess.
+
+    Book-scoped on purpose: we load this book's plan AND canon rules and pass the
+    canon in explicitly, because generate_v7._canon() caches a single module-global
+    that would bind to the wrong book in this long-lived multi-book server.
+    Fail-open — a correction must still run if any of this is unavailable."""
+    try:
+        dd = data_dir(slug)
+        spath = os.path.join(dd, "scenes.toon")
+        if not os.path.exists(spath):
+            return ""
+        sc = _find_scene(toon_io.load(spath), page_id)
+        if sc is None:
+            return ""
+        plan = plan_v3.load(dd)
+        present = sc.get("chars", [])
+        char_items = {n: items_v7.items_for(plan["by"][n]) for n in present
+                      if n in plan["by"] and items_v7.items_for(plan["by"][n])}
+        canon = canon_rules.load(dd)
+        # contract={} skips the LLM pregate facts (not needed for a manual fix);
+        # every other lock is derived offline from the book-scoped plan + canon.
+        return generate_v7._locks_context(sc, plan, {}, present, char_items, canon)
+    except Exception:                                        # noqa: BLE001
+        return ""
 
 
 def correct_page(slug, page_id, instruction):
@@ -218,6 +304,7 @@ def correct_page(slug, page_id, instruction):
         f"Edit this illustrated storybook page. {instruction}. "
         "Change ONLY what is asked; keep every other part of the illustration, the "
         "characters, the composition and any existing text exactly the same. No new text."
+        + _page_locks_context(slug, page_id)
     )
     out = editor.to_square(editor.edit(instr, [original]))
     with open(path, "wb") as f:

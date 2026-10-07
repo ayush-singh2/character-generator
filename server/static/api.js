@@ -116,6 +116,21 @@
     correctPage: (slug, pageId, instruction) =>
       req("POST", "/api/projects/" + slug + "/pages/" + pageId + "/correct",
           { instruction }),
+
+    // --- per-page correction CHAT (human-in-the-loop) ---
+    // message: what's wrong; refPages: ["5"] named references; refFiles: dropped
+    // image Files used as visual references. Returns {ok, reply, page_url, meta}.
+    getChat: (slug, pageId) =>
+      req("GET", "/api/projects/" + slug + "/pages/" + pageId + "/chat").then((d) => d.turns),
+    chatPage: (slug, pageId, message, refPages, refFiles) => {
+      const fd = new FormData();
+      fd.append("message", message || "");
+      if (refPages && refPages.length) fd.append("ref_pages", refPages.join(","));
+      (refFiles || []).forEach((f) => fd.append("refs", f));
+      return req("POST", "/api/projects/" + slug + "/pages/" + pageId + "/chat", fd, true);
+    },
+    revertChat: (slug, pageId) =>
+      req("POST", "/api/projects/" + slug + "/pages/" + pageId + "/chat/revert"),
     getPageNote: (slug, pageId) =>
       req("GET", "/api/projects/" + slug + "/pages/" + pageId + "/note").then((d) => d.note),
     setPageNote: (slug, pageId, note) =>

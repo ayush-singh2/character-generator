@@ -1,0 +1,10 @@
+import {chromium} from '@playwright/test';
+const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/chromium'});
+const page = await browser.newPage({viewport:{width:1280,height:800}});
+const errors=[]; page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>m.type()==='error'&&errors.push(m.text()));
+await page.goto('http://127.0.0.1:4174/workspace?mode=pages',{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1200);
+const labels=await page.locator('button').evaluateAll(xs=>xs.map(x=>({label:(x.innerText||x.getAttribute('aria-label')||x.title||'').trim(),disabled:x.disabled})).filter(x=>x.label));
+console.log(JSON.stringify({errors,labels,dialog:await page.locator('[role=dialog]').count()}));
+await page.getByRole('button',{name:'Preview book'}).click(); await page.waitForTimeout(300);
+console.log(JSON.stringify({preview:await page.locator('.preview').count(),dialogs:await page.locator('[role=dialog]').count(),errors}));
+await browser.close();

@@ -1,0 +1,13 @@
+import {chromium} from '@playwright/test';
+const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/chromium'});
+const page = await browser.newPage({viewport:{width:1440,height:900}});
+page.on('pageerror',e=>console.error('PAGE ERROR:',e.message));
+page.on('console',msg=>{if(msg.type()==='error')console.error('CONSOLE:',msg.text());});
+await page.goto(process.argv[2] || 'http://localhost:5174');
+await page.waitForTimeout(1800);
+await page.screenshot({path:`/tmp/blue-balloon-${process.argv[3] || 'app'}-desktop.png`,fullPage:true});
+console.log((await page.locator('body').innerText()).slice(0,4000));
+await page.setViewportSize({width:390,height:844});
+await page.reload();await page.waitForTimeout(1000);
+await page.screenshot({path:`/tmp/blue-balloon-${process.argv[3] || 'app'}-mobile.png`,fullPage:true});
+await browser.close();
